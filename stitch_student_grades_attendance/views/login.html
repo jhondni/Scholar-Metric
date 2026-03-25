@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Login Scholar Metric - Academic Editorial</title>
+    
+    <!-- External Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="../js/tailwind-config.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    
+    <!-- Application Styles (MVC Separation) -->
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body class="bg-surface font-body text-on-surface flex items-center justify-center min-h-screen p-6">
+    <!-- Dynamic Background Elements -->
+    <div class="flying-archive">
+        <span class="flying-char char-1">A</span>
+        <span class="flying-char char-2">8</span>
+        <span class="flying-char char-3">Σ</span>
+        <span class="flying-char char-4">7</span>
+        <span class="flying-char char-5">M</span>
+        <span class="flying-char char-6">4</span>
+        <span class="flying-char char-7">Ω</span>
+        <span class="flying-char char-8">2</span>
+    </div>
+
+    <main class="w-full max-w-md relative">
+        <!-- Login Card with Glassmorphism -->
+        <div class="bg-surface-container-lowest/70 backdrop-blur-[30px] rounded-[2rem] p-10 md:p-12 shadow-[0_20px_40px_rgba(0,25,68,0.06)] overflow-hidden relative border border-white/20">
+            <!-- Branding/Logo Section -->
+            <div class="flex flex-col items-center mb-10 text-center">
+                <div class="w-16 h-16 bg-primary-container rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                    <span class="material-symbols-outlined text-on-primary-container text-4xl" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+                </div>
+                <h1 class="font-headline font-extrabold text-3xl text-primary tracking-tight mb-2">Login Scholar Metric</h1>
+                <p class="font-body text-on-surface-variant text-sm max-w-[240px]">Acesse o portal de gestão educacional</p>
+            </div>
+
+            <!-- Login Form -->
+            <form action="#" class="space-y-6" method="POST">
+                <!-- Username Field -->
+                <div class="space-y-2">
+                    <label class="font-label font-semibold text-[11px] uppercase tracking-widest text-on-surface-variant ml-1" for="username">USUÁRIO</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-on-surface-variant text-xl">person</span>
+                        </div>
+                        <input class="block w-full pl-12 pr-4 py-4 bg-surface-container-high border-none rounded-xl text-on-surface placeholder-on-surface-variant/50 focus:ring-2 focus:ring-secondary/20 focus:bg-surface-container-lowest transition-all outline-none" id="username" name="username" placeholder="Digite seu ID ou e-mail" type="text"/>
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center ml-1">
+                        <label class="font-label font-semibold text-[11px] uppercase tracking-widest text-on-surface-variant" for="password">SENHA</label>
+                        <a class="font-label text-[11px] text-secondary font-bold hover:underline" href="#">Esqueceu?</a>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-on-surface-variant text-xl">lock</span>
+                        </div>
+                        <input class="block w-full pl-12 pr-4 py-4 bg-surface-container-high border-none rounded-xl text-on-surface placeholder-on-surface-variant/50 focus:ring-2 focus:ring-secondary/20 focus:bg-surface-container-lowest transition-all outline-none" id="password" name="password" placeholder="••••••••" type="password"/>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button class="w-full py-4 px-6 bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-bold rounded-full shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 group" type="submit">
+                    <span>Entrar</span>
+                    <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </button>
+            </form>
+
+            <!-- Footer Links -->
+            <div class="mt-10 pt-8 border-t border-outline-variant/10 flex flex-col items-center gap-4">
+                <p class="font-body text-xs text-on-surface-variant">Não tem uma conta?</p>
+                <button class="px-6 py-2 border border-outline-variant text-primary font-label font-bold text-xs rounded-full hover:bg-surface-container-high transition-colors">
+                    Solicitar Acesso
+                </button>
+            </div>
+
+            <!-- Absolute decorative glow -->
+            <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-secondary/10 rounded-full blur-3xl -z-10"></div>
+            <div class="absolute -top-12 -left-12 w-32 h-32 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+        </div>
+
+        <!-- Semantic Meta Info (Editorial Style) -->
+        <div class="mt-8 flex justify-between items-center px-4 text-[10px] text-on-surface-variant/60 font-label tracking-tighter uppercase font-medium">
+            <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 bg-secondary rounded-full"></span>
+                <span>Sistema Online v4.2.0</span>
+            </div>
+            <div>© 2024 Academic Editorial Labs</div>
+        </div>
+    </main>
+
+    <!-- Background texture detail -->
+    <div class="fixed inset-0 pointer-events-none opacity-[0.03] -z-20" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC-NNnN4HtIgLwjDi4E91JExH6atxOnbdld9pXN9sssCz58VNjADbXVetI4lzsyQBzjoEFKV5z9cCXpPXMQc9myOXaskF4LLbbCe2rUfTLV1QvYINJsMNj7IMxB0WtNS1UYTErpawNYzDnFsen6Uhylqd9gd3eXXKfcnFrXvhILNndo6kOm4PL7L74fkdocmOtjYs2G-s92IbXAmKXMXIGXmgPWWLIC-mIoMoaX4QVoX94eQl8GhBv1LfgD11fcGDMNxJItjkt8QIc');"></div>
+
+    <!-- Application Controller (MVC Separation) -->
+    <script src="../js/controllers/loginController.js"></script>
+</body>
+</html>

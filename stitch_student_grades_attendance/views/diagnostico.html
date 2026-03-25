@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-br">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Diagnóstico de Deficiência Acadêmica | Editorial Acadêmico</title>
+    
+    <!-- External Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="../js/tailwind-config.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    
+    <!-- Application Styles (MVC Separation) -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-surface text-on-surface">
+    <!-- SideNavBar Component -->
+    <aside class="h-screen w-64 fixed left-0 top-0 border-r-0 bg-slate-50 dark:bg-slate-900 flex flex-col py-6 px-4 z-50">
+        <div class="mb-10 px-2">
+            <h1 class="text-2xl font-black tracking-tight text-blue-950 dark:text-white">Editorial</h1>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Sistema de Gestão</p>
+        </div>
+        <nav class="flex-1 space-y-1">
+            <a class="flex items-center gap-3 px-3 py-3 rounded-xl transition-colors duration-200 text-slate-500 hover:bg-slate-200/50 scale-95 active:scale-90 transition-transform" href="painel.html">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-3 rounded-xl transition-colors duration-200 text-blue-900 dark:text-teal-400 font-bold border-r-4 border-teal-600 dark:border-teal-400 bg-white dark:bg-slate-800/80 scale-95 active:scale-90 transition-transform" href="diagnostico.html">
+                <span class="material-symbols-outlined">analytics</span>
+                <span class="font-medium">Análise</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-3 rounded-xl transition-colors duration-200 text-slate-500 hover:bg-slate-200/50 scale-95 active:scale-90 transition-transform" href="registros.html">
+                <span class="material-symbols-outlined">group</span>
+                <span class="font-medium">Alunos</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-3 rounded-xl transition-colors duration-200 text-slate-500 hover:bg-slate-200/50 scale-95 active:scale-90 transition-transform" href="arquivos.html">
+                <span class="material-symbols-outlined">folder_open</span>
+                <span class="font-medium">Arquivos</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-3 rounded-xl transition-colors duration-200 text-slate-500 hover:bg-slate-200/50 scale-95 active:scale-90 transition-transform" href="configuracoes.html">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="font-medium">Configurações</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- TopNavBar Component -->
+    <header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-40 bg-white/80 backdrop-blur-xl flex justify-between items-center px-8 border-b border-slate-100 shadow-sm">
+        <div class="flex items-center gap-6">
+            <div class="relative group">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400">search</span>
+                <input class="pl-10 pr-4 py-2 bg-surface-container-high border-none rounded-full w-64 focus:ring-2 focus:ring-secondary/20 focus:bg-white transition-all text-sm" placeholder="Diagnosticar aluno ou matéria..." type="text"/>
+            </div>
+            <nav class="hidden lg:flex items-center gap-6">
+                <a class="text-slate-500 hover:text-blue-800 text-[11px] font-bold uppercase tracking-widest" href="#">Visão Geral</a>
+                <a class="text-blue-900 border-b-2 border-blue-900 pb-1 text-[11px] font-bold uppercase tracking-widest" href="#">Faculdade</a>
+                <a class="text-slate-500 hover:text-blue-800 text-[11px] font-bold uppercase tracking-widest" href="#">Relatórios</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="p-2 text-slate-500 hover:text-teal-600 transition-all focus-within:ring-2 focus-within:ring-teal-500/20 rounded-full">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <button class="p-2 text-slate-500 hover:text-teal-600 transition-all focus-within:ring-2 focus-within:ring-teal-500/20 rounded-full">
+                <span class="material-symbols-outlined">help_outline</span>
+            </button>
+            <div class="h-8 w-8 rounded-full overflow-hidden border border-slate-200">
+                <img alt="Perfil" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsLBDL3p22PDc0CA__fDx7MQrIcCPV93wW0B7nWu981-9r0HG3EO0Uk8rd_y5LnwgJD9m9aNW1FcimOvXMZ3EKvEi23qu1uCHEGl3uCSdEPmS1GRoK1P-dS0vJrO1rmvC07bNMD1gDnZmD8_UrfYCNt0z9-gfBFQ1TFAUNWb6me643_CCQrXvWCbeQT4BxjwPkQE1SpFH5D6Rws8itJ-ytq-PGIOpywwganNOOuYig96FYWGED3PlSAFN8vFc7OoYz4pItzIIINmA"/>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="ml-64 pt-24 px-8 pb-12 min-h-screen">
+        <!-- Header Section -->
+        <header class="mb-10">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-4xl font-extrabold text-primary tracking-tight mb-2">Diagnóstico de Deficiência Acadêmica</h2>
+                    <p class="text-on-surface-variant max-w-2xl font-medium">Identifique lacunas de aprendizado sistêmicas e desafios individuais através do nosso arquivo de diagnóstico aprofundado.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button class="px-5 py-2.5 rounded-full border border-outline-variant bg-surface-container-lowest text-primary font-bold text-sm hover:bg-surface-bright transition-colors">
+                        Exportar Relatório
+                    </button>
+                    <button class="px-5 py-2.5 rounded-full bg-secondary text-white font-bold text-sm hover:opacity-90 transition-opacity flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">filter_list</span>
+                        Filtrar Visualização
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Top Bento Layer -->
+        <section class="mb-12">
+            <div class="bento-grid">
+                <!-- Large Card: Deficiency Map -->
+                <div class="col-span-8 bg-surface-container-lowest rounded-xl p-8 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-8">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-widest text-secondary mb-1 block">Mapa de Calor Global</span>
+                            <h3 class="text-2xl font-bold text-primary">Mapa de Deficiências</h3>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="flex items-center gap-1 text-xs font-semibold px-3 py-1 bg-surface-container-high rounded-full">
+                                <span class="w-2 h-2 rounded-full bg-error"></span> Crítico
+                            </span>
+                            <span class="flex items-center gap-1 text-xs font-semibold px-3 py-1 bg-surface-container-high rounded-full">
+                                <span class="w-2 h-2 rounded-full bg-orange-400"></span> Moderado
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Subject Matrix -->
+                    <div class="grid grid-cols-4 gap-4 h-64">
+                        <div class="col-span-2 row-span-2 bg-error-container/20 rounded-xl p-4 flex flex-col justify-between border-l-4 border-error">
+                            <div>
+                                <h4 class="font-bold text-on-error-container">Matemática</h4>
+                                <p class="text-xs text-on-error-container/70">Maior lacuna: Álgebra II</p>
+                            </div>
+                            <div class="flex items-end justify-between">
+                                <div class="space-y-1">
+                                    <div class="h-1.5 w-32 bg-error-container rounded-full overflow-hidden">
+                                        <div class="h-full bg-error w-[82%]"></div>
+                                    </div>
+                                    <p class="text-[10px] font-bold uppercase tracking-tighter">82% Lacuna de Participação</p>
+                                </div>
+                                <span class="material-symbols-outlined text-error text-4xl">trending_down</span>
+                            </div>
+                        </div>
+                        <div class="bg-surface-container rounded-xl p-4 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-primary">Literatura</h4>
+                                <p class="text-xs text-on-surface-variant">Gramática e Sintaxe</p>
+                            </div>
+                            <div class="h-1 w-full bg-surface-variant rounded-full">
+                                <div class="h-full bg-secondary w-1/3"></div>
+                            </div>
+                        </div>
+                        <div class="bg-orange-50 rounded-xl p-4 flex flex-col justify-between border-l-4 border-orange-400">
+                            <div>
+                                <h4 class="font-bold text-orange-950">Ciências</h4>
+                                <p class="text-xs text-orange-800">Física Quântica</p>
+                            </div>
+                            <p class="text-xl font-black text-orange-600">42%</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Secondary Card -->
+                <div class="col-span-4 bg-primary rounded-xl p-8 text-on-primary relative flex flex-col justify-between overflow-hidden">
+                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-widest opacity-60 mb-1 block">Intervenções Ativas</span>
+                        <h3 class="text-2xl font-bold mb-6">Pulso de Recuperação</h3>
+                        <div class="space-y-6 text-sm font-medium">
+                            <div class="flex justify-between"><span>Aulas de Reforço</span><span class="text-xl font-bold">12 Ativas</span></div>
+                            <div class="flex justify-between"><span>Alunos Alvo</span><span class="text-xl font-bold">148</span></div>
+                            <div class="flex justify-between"><span>Taxa de Sucesso</span><span class="text-xl font-bold text-secondary-fixed-dim">64%</span></div>
+                        </div>
+                    </div>
+                    <button class="w-full py-3 bg-secondary rounded-full font-bold text-white mt-8 hover:brightness-110 transition-all">Ver Cronograma</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lower Layer -->
+        <section class="grid grid-cols-12 gap-8">
+            <div class="col-span-8 space-y-4">
+                <h3 class="text-xl font-bold text-primary">Detalhamento de Alunos</h3>
+                <div class="bg-surface-container-lowest rounded-xl overflow-hidden glass-card">
+                    <table class="w-full text-left">
+                        <thead><tr class="bg-surface-container-low text-[11px] font-bold uppercase tracking-widest text-slate-400"><th class="px-6 py-4">Aluno</th><th class="px-6 py-4">Deficiência</th><th class="px-6 py-4">Gravidade</th><th class="px-6 py-4">Ações</th></tr></thead>
+                        <tbody class="divide-y divide-surface-container">
+                            <tr><td class="px-6 py-5 font-bold">Elena Rodriguez</td><td class="px-6 py-5 text-sm">Dificuldade com Cálculo</td><td class="px-6 py-5 text-error font-black">Crítico</td><td class="px-6 py-5"><button class="text-secondary font-bold">Ver Perfil</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-span-4 space-y-6">
+                <h3 class="text-xl font-bold text-primary">Recomendações</h3>
+                <div class="bg-surface-container-low rounded-xl p-6 border-l-4 border-secondary">
+                    <h4 class="font-bold text-primary">Mentoria entre Pares</h4>
+                    <p class="text-xs mt-2">Lacuna sistêmica em Funções Quadráticas.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Application Controller -->
+    <script src="../js/controllers/diagnosticoController.js"></script>
+</body>
+</html>

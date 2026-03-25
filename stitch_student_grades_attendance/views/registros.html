@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Registros de Alunos | Academic Editorial</title>
+    
+    <!-- External Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="../js/tailwind-config.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    
+    <!-- Application Styles (MVC Separation) -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-surface text-on-surface">
+    <!-- SideNavBar Component -->
+    <aside class="flex flex-col h-full py-6 px-4 bg-slate-50 dark:bg-slate-900 h-screen w-64 fixed left-0 top-0 border-r-0 z-50">
+        <div class="mb-10 px-4">
+            <h1 class="text-2xl font-black tracking-tight text-blue-950 dark:text-white font-headline">Editorial</h1>
+            <p class="text-[10px] font-label uppercase tracking-[0.2em] text-slate-500">Sistema de Gestão</p>
+        </div>
+        <nav class="flex-1 space-y-1">
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-slate-500 hover:bg-slate-200/50" href="painel.html">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span class="font-medium">Painel</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-blue-900 dark:text-teal-400 font-bold border-r-4 border-teal-600 dark:border-teal-400 bg-white dark:bg-slate-800/80" href="registros.html">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">group</span>
+                <span class="font-medium">Alunos</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-slate-500 hover:bg-slate-200/50" href="diagnostico.html">
+                <span class="material-symbols-outlined">analytics</span>
+                <span class="font-medium">Análises</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-slate-500 hover:bg-slate-200/50" href="arquivos.html">
+                <span class="material-symbols-outlined">folder_open</span>
+                <span class="font-medium">Arquivos</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-slate-500 hover:bg-slate-200/50" href="configuracoes.html">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="font-medium">Configurações</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- TopNavBar Component -->
+    <header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center px-8">
+        <div class="flex items-center gap-8">
+            <div class="relative group">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 group-focus-within:text-secondary">
+                    <span class="material-symbols-outlined text-xl">search</span>
+                </span>
+                <input class="pl-10 pr-4 py-1.5 bg-surface-container-high border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-secondary/20 focus:bg-surface-container-lowest transition-all" placeholder="Buscar registros..." type="text"/>
+            </div>
+            <nav class="hidden lg:flex items-center gap-6">
+                <a class="text-slate-500 font-label uppercase tracking-widest text-[11px] hover:text-blue-800 transition-all" href="#">Visão Geral</a>
+                <a class="text-blue-900 dark:text-teal-400 border-b-2 border-blue-900 dark:border-teal-400 pb-1 font-label uppercase tracking-widest text-[11px]" href="#">Corpo Docente</a>
+                <a class="text-slate-500 font-label uppercase tracking-widest text-[11px] hover:text-blue-800 transition-all" href="#">Relatórios</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="p-2 text-slate-500 hover:text-secondary transition-all">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <button class="p-2 text-slate-500 hover:text-secondary transition-all">
+                <span class="material-symbols-outlined">help_outline</span>
+            </button>
+            <div class="h-8 w-8 rounded-full bg-primary-fixed-dim overflow-hidden ml-2 border-2 border-surface">
+                <img alt="Perfil Administrativo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9dg0947ldIlHy1UchWP3fNGXmIUZo-L4rXJARmGJVf_edTtp0pMsF4QPGi0_OpuTtnuOgLvh-id3DkweaJnZofhp77b-PSLt4Xam7c2iWYVKHYL50uitkpdpIthlDPhmWLUg5DBXftegSy70xUkZAuXRg6cSwhz7sUbZeRpfpiOZn7gCD6CGrNlpW0K-WNkFyLHjNd-ygustEozBzRyV6A_M-J4PVwfnWC_q8GWB2YxB-P7krm5HBN32i54BMFQuD65qtlVXgcTo"/>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Canvas -->
+    <main class="ml-64 pt-24 px-8 pb-12 min-h-screen">
+        <!-- Header Section -->
+        <div class="flex justify-between items-end mb-10">
+            <div>
+                <h2 class="text-4xl font-extrabold font-headline tracking-tight text-primary">Registros de Alunos</h2>
+                <p class="text-on-surface-variant mt-2 font-medium">Ano Letivo 2023-2024 • Semestre 2</p>
+            </div>
+            <div class="flex gap-3">
+                <button class="px-6 py-2.5 bg-surface-container-highest text-on-surface rounded-full font-semibold text-sm flex items-center gap-2 hover:bg-surface-variant transition-colors">
+                    <span class="material-symbols-outlined text-lg">file_download</span>
+                    Exportar Notas
+                </button>
+                <button class="px-6 py-2.5 bg-primary text-on-primary rounded-full font-semibold text-sm flex items-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
+                    <span class="material-symbols-outlined text-lg">upload_file</span>
+                    Importar Dados
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="grid grid-cols-12 gap-6 mb-10">
+            <div class="col-span-12 lg:col-span-8 bg-surface-container-low rounded-xl p-6 flex flex-wrap gap-6 items-center">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant px-1">TURMA</label>
+                    <select class="bg-surface-container-lowest border-none rounded-lg text-sm px-4 py-2 pr-10 focus:ring-2 focus:ring-secondary/20">
+                        <option>11º Ano - Ciências A</option>
+                        <option>11º Ano - Ciências B</option>
+                        <option>12º Ano - Humanidades</option>
+                    </select>
+                </div>
+                <!-- Add other filters similarly -->
+            </div>
+            <div class="col-span-12 lg:col-span-4 bg-tertiary-container rounded-xl p-6 flex items-center justify-between text-white overflow-hidden relative">
+                <div class="relative z-10">
+                    <p class="text-[10px] font-label uppercase tracking-widest opacity-70">DESEMPENHO MÉDIO</p>
+                    <h3 class="text-3xl font-black font-headline">88.4%</h3>
+                </div>
+                <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-secondary/10 rounded-full blur-2xl"></div>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm shadow-primary/5">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-surface-container-low/50">
+                        <th class="py-5 px-8 text-[11px] font-label uppercase tracking-widest text-on-surface-variant font-bold">NOME DO ALUNO</th>
+                        <th class="py-5 px-6 text-[11px] font-label uppercase tracking-widest text-on-surface-variant font-bold">ID DO ALUNO</th>
+                        <th class="py-5 px-6 text-[11px] font-label uppercase tracking-widest text-on-surface-variant font-bold text-center">MÉDIA</th>
+                        <th class="py-5 px-6 text-[11px] font-label uppercase tracking-widest text-on-surface-variant font-bold text-center">FALTAS</th>
+                        <th class="py-5 px-8 text-[11px] font-label uppercase tracking-widest text-on-surface-variant font-bold text-right">AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-surface-container">
+                    <!-- Row 1 -->
+                    <tr class="group hover:bg-surface-bright transition-colors">
+                        <td class="py-4 px-8">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-xs">JA</div>
+                                <div>
+                                    <p class="font-bold text-primary text-sm">Julian Anderson</p>
+                                    <p class="text-xs text-on-surface-variant">julian.a@academy.edu</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 px-6"><code class="text-xs font-mono bg-surface-container px-2 py-1 rounded">STU-2023-0492</code></td>
+                        <td class="py-4 px-6 text-center"><span class="inline-block px-3 py-1 rounded-full bg-tertiary-container/10 text-on-tertiary-container font-bold text-sm">94.2</span></td>
+                        <td class="py-4 px-6 text-center"><span class="text-sm font-medium">2</span></td>
+                        <td class="py-4 px-8 text-right"><button class="px-4 py-2 text-primary font-bold text-xs hover:bg-primary/5 rounded-lg transition-all">DETALHES</button></td>
+                    </tr>
+                    <!-- Add more rows similarly -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Application Controller -->
+    <script src="../js/controllers/registrosController.js"></script>
+</body>
+</html>
