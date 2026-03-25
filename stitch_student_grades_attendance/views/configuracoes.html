@@ -1,56 +1,68 @@
 <!DOCTYPE html>
 <html class="light" lang="pt-BR">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Configurações | Scholar Metric</title>
-    
+
     <!-- External Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="../js/tailwind-config.js"></script>
-    
+
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect"/>
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-    
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
     <!-- Application Styles (MVC Separation) -->
     <link rel="stylesheet" href="../css/style.css">
 </head>
+
 <body class="bg-surface text-on-surface">
     <!-- SideNavBar Component -->
     <aside class="h-screen w-64 fixed left-0 top-0 bg-slate-50 dark:bg-slate-900 flex flex-col py-6 px-4 z-50">
         <div class="mb-10 px-4">
-            <h1 class="text-2xl font-black tracking-tight text-blue-950 dark:text-white">Editorial</h1>
-            <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">Sistema de Gestão</p>
+            <h1 class="text-2xl font-black tracking-tight text-blue-950 dark:text-white font-headline">Editorial</h1>
+            <p class="text-[10px] font-label uppercase tracking-[0.2em] text-slate-500 font-bold">Sistema de Gestão</p>
         </div>
         <nav class="flex-1 space-y-1">
-            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-blue-900 hover:bg-slate-200/50 transition-colors" href="painel.html">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span class="font-body text-sm">Dashboard</span>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 transition-colors duration-200 border-r-4 border-transparent"
+                href="painel.html">
+                <span class="material-symbols-outlined text-xl">dashboard</span>
+                <span class="font-medium">Painel</span>
             </a>
-            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-blue-900 hover:bg-slate-200/50 transition-colors" href="registros.html">
-                <span class="material-symbols-outlined">group</span>
-                <span class="font-body text-sm">Alunos</span>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 transition-colors duration-200 border-r-4 border-transparent"
+                href="registros.html">
+                <span class="material-symbols-outlined text-xl">group</span>
+                <span class="font-medium">Alunos</span>
             </a>
-            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-blue-900 hover:bg-slate-200/50 transition-colors" href="diagnostico.html">
-                <span class="material-symbols-outlined">analytics</span>
-                <span class="font-body text-sm">Análise</span>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 transition-colors duration-200 border-r-4 border-transparent"
+                href="diagnostico.html">
+                <span class="material-symbols-outlined text-xl">analytics</span>
+                <span class="font-medium">Análises</span>
             </a>
-            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:text-blue-900 hover:bg-slate-200/50 transition-colors" href="arquivos.html">
-                <span class="material-symbols-outlined">folder_open</span>
-                <span class="font-body text-sm">Arquivos</span>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 transition-colors duration-200 border-r-4 border-transparent"
+                href="arquivos.html">
+                <span class="material-symbols-outlined text-xl">folder_open</span>
+                <span class="font-medium">Arquivos</span>
             </a>
-            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-900 dark:text-teal-400 font-bold border-r-4 border-teal-600 dark:border-teal-400 bg-white dark:bg-slate-800/80 transition-all scale-95" href="configuracoes.html">
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-900 dark:text-teal-400 font-bold border-r-4 border-teal-600 dark:border-teal-400 bg-white dark:bg-slate-800/80 transition-all duration-200"
+                href="configuracoes.html">
                 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
-                <span class="font-body text-sm">Configurações</span>
+                <span class="font-medium">Configurações</span>
             </a>
         </nav>
     </aside>
 
     <!-- TopNavBar Component -->
-    <header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50 z-40">
+    <header
+        class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50 z-40">
         <div class="flex justify-between items-center px-8 h-full">
             <h2 class="text-lg font-bold text-primary">Configurações do Sistema</h2>
             <div class="flex items-center gap-4">
@@ -58,7 +70,8 @@
                     <span class="material-symbols-outlined">notifications</span>
                 </button>
                 <div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200 cursor-pointer">
-                    <img alt="Perfil" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsEQe1QO2xP3iZ98NoP1WRu9beigJUlvcsEcQI77FzOfNk544YRgInVvm3st3ImQKLqf8bNuNK89TKXpYjL5vTapg-JFUY7jrM6A2CRDDE2BSPUJx4s12SFFRKZT_qI0g1Ok9X99cp8uoniriOuzzIwhLQgOjIQV1zgD4WsItYBFmWkGlAj4PI1xgyuERfz-iJQySZjH_GW_IFCMX9S744wBR4-3BjGgbplsuvYqiciT5cpgFtFcRf5QPS8pAUOWZxOYB5YwYePeA"/>
+                    <img alt="Perfil" class="w-full h-full object-cover"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsEQe1QO2xP3iZ98NoP1WRu9beigJUlvcsEcQI77FzOfNk544YRgInVvm3st3ImQKLqf8bNuNK89TKXpYjL5vTapg-JFUY7jrM6A2CRDDE2BSPUJx4s12SFFRKZT_qI0g1Ok9X99cp8uoniriOuzzIwhLQgOjIQV1zgD4WsItYBFmWkGlAj4PI1xgyuERfz-iJQySZjH_GW_IFCMX9S744wBR4-3BjGgbplsuvYqiciT5cpgFtFcRf5QPS8pAUOWZxOYB5YwYePeA" />
                 </div>
             </div>
         </div>
@@ -70,14 +83,16 @@
             <!-- Header -->
             <div>
                 <h2 class="text-3xl font-black text-primary tracking-tight mb-2">Ajustes e Preferências</h2>
-                <p class="text-on-surface-variant font-body text-sm">Gerencie seu perfil e configurações da plataforma Scholar Metric.</p>
+                <p class="text-on-surface-variant font-body text-sm">Gerencie seu perfil e configurações da plataforma
+                    Scholar Metric.</p>
             </div>
 
             <!-- Bento Grid Split -->
             <div class="bento-grid">
                 <!-- Profile Section -->
                 <div class="col-span-12 lg:col-span-7 space-y-6">
-                    <div class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
+                    <div
+                        class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
                         <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2">
                             <span class="material-symbols-outlined text-secondary">person</span>
                             Perfil do Administrador
@@ -85,52 +100,68 @@
                         <div class="flex items-center gap-6 mb-8">
                             <div class="relative group">
                                 <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-sm">
-                                    <img alt="Foto de Perfil" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsEQe1QO2xP3iZ98NoP1WRu9beigJUlvcsEcQI77FzOfNk544YRgInVvm3st3ImQKLqf8bNuNK89TKXpYjL5vTapg-JFUY7jrM6A2CRDDE2BSPUJx4s12SFFRKZT_qI0g1Ok9X99cp8uoniriOuzzIwhLQgOjIQV1zgD4WsItYBFmWkGlAj4PI1xgyuERfz-iJQySZjH_GW_IFCMX9S744wBR4-3BjGgbplsuvYqiciT5cpgFtFcRf5QPS8pAUOWZxOYB5YwYePeA"/>
+                                    <img alt="Foto de Perfil" class="w-full h-full object-cover"
+                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsEQe1QO2xP3iZ98NoP1WRu9beigJUlvcsEcQI77FzOfNk544YRgInVvm3st3ImQKLqf8bNuNK89TKXpYjL5vTapg-JFUY7jrM6A2CRDDE2BSPUJx4s12SFFRKZT_qI0g1Ok9X99cp8uoniriOuzzIwhLQgOjIQV1zgD4WsItYBFmWkGlAj4PI1xgyuERfz-iJQySZjH_GW_IFCMX9S744wBR4-3BjGgbplsuvYqiciT5cpgFtFcRf5QPS8pAUOWZxOYB5YwYePeA" />
                                 </div>
-                                <button class="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-primary hover:bg-slate-50 transition-all">
+                                <button
+                                    class="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-primary hover:bg-slate-50 transition-all">
                                     <span class="material-symbols-outlined text-sm">photo_camera</span>
                                 </button>
                             </div>
                             <div class="flex-1 space-y-1">
                                 <h4 class="font-bold text-primary">Admin Scholar Metric</h4>
                                 <p class="text-xs text-on-surface-variant font-medium">admin@scholar-metric.edu</p>
-                                <span class="inline-block px-2 py-0.5 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold rounded-lg uppercase tracking-wider">Acesso Total</span>
+                                <span
+                                    class="inline-block px-2 py-0.5 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold rounded-lg uppercase tracking-wider">Acesso
+                                    Total</span>
                             </div>
                         </div>
 
                         <!-- Form Mockup -->
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1.5 text-left">
-                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">NOME EXIBIDO</label>
-                                <input type="text" class="w-full bg-surface-container-high border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-secondary/20 transition-all" value="Admin Scholar Metric">
+                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">NOME
+                                    EXIBIDO</label>
+                                <input type="text"
+                                    class="w-full bg-surface-container-high border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
+                                    value="Admin Scholar Metric">
                             </div>
                             <div class="space-y-1.5 text-left">
-                                <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">CARGO</label>
-                                <input type="text" class="w-full bg-surface-container-high border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-secondary/20 transition-all" value="Diretor Acadêmico">
+                                <label
+                                    class="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">CARGO</label>
+                                <input type="text"
+                                    class="w-full bg-surface-container-high border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-secondary/20 transition-all"
+                                    value="Diretor Acadêmico">
                             </div>
                         </div>
                     </div>
 
                     <!-- Security Options -->
-                    <div class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
+                    <div
+                        class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
                         <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2">
                             <span class="material-symbols-outlined text-error">security</span>
                             Segurança
                         </h3>
                         <div class="space-y-4">
-                            <button class="w-full flex items-center justify-between p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all text-left group">
+                            <button
+                                class="w-full flex items-center justify-between p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all text-left group">
                                 <div>
                                     <p class="font-bold text-primary text-sm">Alterar Senha</p>
-                                    <p class="text-[10px] text-on-surface-variant mt-0.5">Última alteração há 3 meses</p>
+                                    <p class="text-[10px] text-on-surface-variant mt-0.5">Última alteração há 3 meses
+                                    </p>
                                 </div>
-                                <span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+                                <span
+                                    class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
                             </button>
-                            <button class="w-full flex items-center justify-between p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all text-left group">
+                            <button
+                                class="w-full flex items-center justify-between p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all text-left group">
                                 <div>
                                     <p class="font-bold text-primary text-sm">Autenticação em Duas Etapas</p>
                                     <p class="text-[10px] text-secondary mt-0.5 font-bold">Ativado (via e-mail)</p>
                                 </div>
-                                <span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+                                <span
+                                    class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
                             </button>
                         </div>
                     </div>
@@ -139,7 +170,8 @@
                 <!-- Right Column: Settings Sections -->
                 <div class="col-span-12 lg:col-span-5 space-y-6">
                     <!-- Notifications Section -->
-                    <div class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
+                    <div
+                        class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
                         <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2">
                             <span class="material-symbols-outlined text-primary">notifications_active</span>
                             Notificações
@@ -148,36 +180,43 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-primary">Alertas por E-mail</p>
-                                    <p class="text-[10px] text-on-surface-variant">Relatórios semanais de performance</p>
+                                    <p class="text-[10px] text-on-surface-variant">Relatórios semanais de performance
+                                    </p>
                                 </div>
                                 <div class="w-10 h-5 bg-secondary rounded-full relative cursor-pointer">
-                                    <div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                                    <div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm">
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-primary">Notificações Push</p>
-                                    <p class="text-[10px] text-on-surface-variant">Alertas em tempo real sobre faltas</p>
+                                    <p class="text-[10px] text-on-surface-variant">Alertas em tempo real sobre faltas
+                                    </p>
                                 </div>
                                 <div class="w-10 h-5 bg-slate-300 rounded-full relative cursor-pointer">
-                                    <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                                    <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm">
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- App Appearance -->
-                    <div class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
+                    <div
+                        class="bg-surface-container-lowest p-8 rounded-2xl glass-card border border-white/40 shadow-sm">
                         <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2">
                             <span class="material-symbols-outlined text-on-tertiary-container">contrast</span>
                             Aparência
                         </h3>
                         <div class="grid grid-cols-2 gap-3">
-                            <button class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-secondary bg-surface-container-low transition-all">
+                            <button id="btn-tema-claro"
+                                class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-secondary bg-surface-container-low transition-all">
                                 <div class="w-full aspect-video bg-white rounded-md border border-slate-200"></div>
                                 <span class="text-[10px] font-bold text-primary uppercase">Tema Claro</span>
                             </button>
-                            <button class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-transparent bg-surface-container-low hover:border-slate-200 transition-all">
+                            <button id="btn-tema-escuro"
+                                class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-transparent bg-surface-container-low hover:border-slate-200 transition-all">
                                 <div class="w-full aspect-video bg-slate-900 rounded-md"></div>
                                 <span class="text-[10px] font-bold text-on-surface-variant uppercase">Tema Escuro</span>
                             </button>
@@ -188,8 +227,11 @@
 
             <!-- Footer Actions -->
             <div class="flex justify-end gap-3 pt-6 border-t border-slate-200">
-                <button class="px-6 py-2.5 rounded-full font-bold text-sm text-on-surface-variant hover:bg-slate-100 transition-colors">Descartar</button>
-                <button class="px-8 py-2.5 rounded-full bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">Salvar Alterações</button>
+                <button
+                    class="px-6 py-2.5 rounded-full font-bold text-sm text-on-surface-variant hover:bg-slate-100 transition-colors">Descartar</button>
+                <button
+                    class="px-8 py-2.5 rounded-full bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">Salvar
+                    Alterações</button>
             </div>
         </div>
     </main>
@@ -197,4 +239,5 @@
     <!-- Application Controller -->
     <script src="../js/controllers/configuracoesController.js"></script>
 </body>
+
 </html>
