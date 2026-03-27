@@ -492,6 +492,42 @@ Tipo: diretora (acesso total)
 
 ## 📋 Changelog
 
+### Versão 1.3.0 (27/03/2026)
+
+#### ✅ Melhorias de Animação - Páginas de Autenticação
+- **Animação de background redesenhada**:
+  - Movimento flutuante bidimensional (X e Y)
+  - 3 variações de animação para movimento mais natural
+  - Símbolos incluem: números, símbolos matemáticos, letras (x, y, z, a, b, c)
+  - Distribuição aleatória na tela
+  - Baixa opacidade (4% a 12%) para não atrapalhar leitura
+  
+- **Símbolos implementados**:
+  - Números: 0-9
+  - Operadores: +, −, ×, ÷, =, <, >, ≠, ≈, ±
+  - Matemáticos: ∑, √, π, ∞, ∫, ∂, ∇, ∆, ∏, ∪, ∩
+  - Grego: α, β, γ, δ, θ, λ, μ, σ, φ, ω, Δ, Σ, Ω
+  - Variáveis: x, y, z, a, b, c, n, m, i, f, e
+  - Conjuntos: ∈, ∉, ⊂, ⊃, ⊆, ⊇, ∅, ∀, ∃
+
+- **Otimizações de performance**:
+  - Uso de `will-change` e `transform` para GPU acceleration
+  - Pausa de animação quando aba não está visível
+  - Suporte a `prefers-reduced-motion` (movimento reduzido)
+  - Animações pausadas quando usuário prefere menos movimento
+
+- **Responsividade**:
+  - Funciona em desktop, tablet e mobile
+  - Ajuste automático de densidade de símbolos
+
+- **Tema escuro**:
+  - Opacidade ajustada para tema escuro
+  - Cores adaptadas automaticamente
+
+- **Arquivos modificados**:
+  - `app/static/js/auth.js` - JavaScript completamente reescrito
+  - `app/static/css/auth.css` - Animações CSS atualizadas
+
 ### Versão 1.2.0 (27/03/2026)
 
 #### ✅ Correções de Layout - Páginas de Autenticação

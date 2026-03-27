@@ -35,34 +35,34 @@ body.auth-mode html {
 }
 
 /* ==================== Background Animado ==================== */
+/* Estilos mínimos - complementado pelo JavaScript */
 .auth-bg {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     z-index: 0;
+    pointer-events: none;
 }
 
-.auth-symbol {
+/* Símbolos - estilos base (JS injeta animações) */
+.auth-symbol,
+.auth-symbol-static {
     position: absolute;
-    color: rgba(255, 255, 255, 0.08);
-    font-size: 2rem;
-    animation: authFloat 30s infinite linear;
+    color: rgba(255, 255, 255, 0.15);
+    font-family: 'Times New Roman', Georgia, serif;
     pointer-events: none;
     user-select: none;
-    font-family: 'Times New Roman', serif;
+    display: block;
+    line-height: 1;
 }
 
-@keyframes authFloat {
-    0% {
-        transform: translateY(100vh) rotate(0deg) scale(1);
-        opacity: 0;
-    }
-    5% { opacity: 0.12; }
-    95% { opacity: 0.12; }
-    100% {
-        transform: translateY(-100vh) rotate(720deg) scale(0.5);
-        opacity: 0;
-    }
+/* Tema escuro */
+[data-theme="dark"] .auth-symbol,
+[data-theme="dark"] .auth-symbol-static {
+    color: rgba(255, 255, 255, 0.1);
 }
 
 /* ==================== Wrapper Principal ==================== */
