@@ -580,6 +580,21 @@ Tipo: diretora (acesso total)
 - **Factory**: Criação automática de tabelas na inicialização
 - **run.py**: Banner de inicialização e tratamento de erros
 
+### Versão 1.4.0 (27/03/2026)
+
+#### ✅ Consistência de UI - Sidebar e Header
+- **Problema corrigido**: Altura inconsistente entre `.sidebar-header` e `.header`
+- **Solução aplicada**:
+  - `.sidebar-header` agora usa `height: var(--header-height)` (mesma variável do `.header`)
+  - Padding alterado de `1.5rem` (todos os lados) para `0 1.5rem` (apenas horizontal)
+  - Ambos os elementos compartilham a mesma variável CSS `--header-height`
+- **Responsividade**: Alterações se adaptam automaticamente via variável CSS (64px desktop, 56px mobile)
+- **Boas práticas**:
+  - Zero código duplicado
+  - Variáveis CSS reutilizáveis
+  - Sem impacto em outros componentes
+- **Arquivo modificado**: `app/static/css/main.css`
+
 ### Versão 1.0.0 (26/03/2026)
 - Versão inicial do sistema
 - Estrutura MVC completa
