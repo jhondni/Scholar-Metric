@@ -492,6 +492,21 @@ Tipo: diretora (acesso total)
 
 ## 📋 Changelog
 
+### Versão 1.2.0 (27/03/2026)
+
+#### ✅ Correções de Layout - Páginas de Autenticação
+- **Problema corrigido**: Páginas de autenticação ocupando apenas metade da tela
+- **Solução aplicada**:
+  - Adicionada classe `auth-mode` no `<body>` para páginas não autenticadas
+  - CSS do body resetado em modo auth: `display: block` (substituindo `flex`)
+  - Dimensões do `.auth-page` ajustadas: `width: 100%` e `height: 100vh`
+  - Compatibilidade garantida com todos os navegadores modernos
+- **Páginas corrigidas**:
+  - Login (`/auth/login`)
+  - Registro (`/auth/registro`)
+  - Recuperação de senha (`/auth/recuperar-senha`)
+- **Responsividade mantida**: Layout funciona corretamente em desktop, tablet e mobile
+
 ### Versão 1.1.0 (27/03/2026)
 
 #### ✅ Correções
@@ -508,14 +523,20 @@ Tipo: diretora (acesso total)
   - Aulas de exemplo
   - Feriados nacionais
 
-#### ✅ Melhorias de UI
-- **Página de login**: Redesign completo com layout moderno
-  - Layout dividido (informações + formulário)
-  - Animação de símbolos matemáticos no background
-  - Toggle de visibilidade da senha
-  - Exibição de credenciais de teste
-  - Design responsivo para mobile
-  - Feedback visual melhorado
+#### ✅ Melhorias de UI/UX - Páginas de Autenticação
+- **Layout consistente**: Todas as páginas de auth agora usam o mesmo layout split screen
+- **CSS compartilhado** (`auth.css`): Estilos reutilizáveis para login, registro e recuperação
+- **JavaScript compartilhado** (`auth.js`): Animações e funcionalidades comuns
+- **Responsividade**: Suporte completo a desktop, tablet e mobile
+- **Tema escuro**: Suporte a tema escuro em todas as páginas de auth
+- **Melhorias visuais**:
+  - Animação de entrada suave
+  - Toggle de visibilidade de senha
+  - Alertas estilizados
+  - Botões com efeitos de hover
+  - Checkbox customizado
+  - Validação visual de campos
+  - Links de navegação entre páginas
 
 #### ✅ Melhorias Técnicas
 - **Configuração**: Função `check_database_connection()` para verificar conexão

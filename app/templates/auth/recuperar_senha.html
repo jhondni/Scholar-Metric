@@ -2,116 +2,102 @@
 
 {% block title %}Recuperar Senha - Analitcs School{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
 {% block auth_content %}
-<div class="login-container">
-    <div class="login-background" id="loginBackground"></div>
+<div class="auth-page">
+    <!-- Background animado -->
+    <div class="auth-bg" id="authBg"></div>
     
-    <div class="login-card">
-        <div class="login-header">
-            <div class="login-logo">
-                <i class="fas fa-graduation-cap"></i>
-                <span>Analitcs School</span>
+    <!-- Container principal -->
+    <div class="auth-wrapper">
+        <!-- Lado esquerdo - Informações -->
+        <div class="auth-info">
+            <div class="auth-info-content">
+                <div class="auth-logo">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h1 class="auth-title">Recuperar Senha</h1>
+                <p class="auth-subtitle">Não se preocupe, vamos ajudar você a recuperar o acesso à sua conta</p>
+                
+                <div class="auth-features">
+                    <div class="auth-feature">
+                        <i class="fas fa-envelope"></i>
+                        <span>Envio por e-mail</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="fas fa-clock"></i>
+                        <span>Processo rápido</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="fas fa-lock"></i>
+                        <span>Seguro e confiável</span>
+                    </div>
+                </div>
             </div>
-            <p class="login-subtitle">Recupere sua senha</p>
         </div>
         
-        <form class="login-form" method="POST" action="{{ url_for('auth.recuperar_senha') }}">
-            {{ form.hidden_tag() }}
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
-                            <span>{{ message }}</span>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <p class="text-center text-muted mb-3">
-                Digite seu e-mail para receber instruções de recuperação de senha.
-            </p>
-            
-            <div class="form-group">
-                <div class="input-wrapper">
-                    <i class="fas fa-envelope input-icon"></i>
-                    {{ form.email(class="form-control", placeholder="Seu e-mail") }}
+        <!-- Lado direito - Formulário -->
+        <div class="auth-form-container">
+            <div class="auth-form-card">
+                <!-- Header -->
+                <div class="auth-form-header">
+                    <h2 class="auth-form-title">Esqueceu a senha?</h2>
+                    <p class="auth-form-desc">Digite seu e-mail para receber instruções de recuperação de senha</p>
                 </div>
-                {% if form.email.errors %}
-                    {% for error in form.email.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-                {% endif %}
+                
+                <!-- Alertas -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="auth-alert auth-alert-{{ category }}">
+                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}times-circle{% else %}info-circle{% endif %}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Formulário -->
+                <form class="auth-form" method="POST" action="{{ url_for('auth.recuperar_senha') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Campo E-mail -->
+                    <div class="auth-field">
+                        <label class="auth-label" for="email">
+                            <i class="fas fa-envelope"></i>
+                            E-mail cadastrado
+                        </label>
+                        {{ form.email(class="auth-input", placeholder="seu@email.com", id="email", autocomplete="email") }}
+                        {% if form.email.errors %}
+                            {% for error in form.email.errors %}
+                                <span class="auth-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Botão -->
+                    <button type="submit" class="auth-btn">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Enviar instruções</span>
+                    </button>
+                </form>
+                
+                <!-- Link de volta -->
+                <div class="auth-nav" style="margin-top: 1.5rem;">
+                    <a href="{{ url_for('auth.login') }}" class="auth-back">
+                        <i class="fas fa-arrow-left"></i>
+                        Voltar para o login
+                    </a>
+                </div>
             </div>
-            
-            <button type="submit" class="btn btn-primary login-btn">
-                <i class="fas fa-paper-plane"></i>
-                Enviar instruções
-            </button>
-        </form>
-        
-        <div class="login-footer">
-            <p>Lembrou sua senha? <a href="{{ url_for('auth.login') }}">Faça login</a></p>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-.login-background {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 50%, #1e1b4b 100%);
-}
-
-.floating-symbol {
-    position: absolute;
-    color: rgba(255, 255, 255, 0.1);
-    font-size: 2rem;
-    animation: floatSymbol 25s infinite linear;
-    pointer-events: none;
-    user-select: none;
-}
-
-@keyframes floatSymbol {
-    0% {
-        transform: translateY(100vh) rotate(0deg) scale(1);
-        opacity: 0;
-    }
-    5% {
-        opacity: 0.15;
-    }
-    95% {
-        opacity: 0.15;
-    }
-    100% {
-        transform: translateY(-100vh) rotate(720deg) scale(0.5);
-        opacity: 0;
-    }
-}
-</style>
-
-<script>
-(function() {
-    const symbols = ['?', '!', '@', '#', '%', '&', '*', '+', '-', '='];
-    
-    const background = document.getElementById('loginBackground');
-    const totalSymbols = 30;
-    
-    for (let i = 0; i < totalSymbols; i++) {
-        const symbol = document.createElement('span');
-        symbol.className = 'floating-symbol';
-        symbol.textContent = symbols[Math.floor(Math.random() * symbols.length)];
-        
-        symbol.style.left = Math.random() * 100 + '%';
-        symbol.style.fontSize = (Math.random() * 2 + 1) + 'rem';
-        symbol.style.animationDuration = (Math.random() * 20 + 15) + 's';
-        symbol.style.animationDelay = (Math.random() * 25) + 's';
-        symbol.style.opacity = Math.random() * 0.1 + 0.05;
-        
-        background.appendChild(symbol);
-    }
-})();
-</script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 {% endblock %}

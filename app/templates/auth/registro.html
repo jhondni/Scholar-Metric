@@ -1,165 +1,175 @@
 {% extends "base.html" %}
 
-{% block title %}Cadastro - Analitcs School{% endblock %}
+{% block title %}Criar Conta - Analitcs School{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
 
 {% block auth_content %}
-<div class="login-container">
-    <div class="login-background" id="loginBackground"></div>
+<div class="auth-page">
+    <!-- Background animado -->
+    <div class="auth-bg" id="authBg"></div>
     
-    <div class="login-card">
-        <div class="login-header">
-            <div class="login-logo">
-                <i class="fas fa-graduation-cap"></i>
-                <span>Analitcs School</span>
+    <!-- Container principal -->
+    <div class="auth-wrapper">
+        <!-- Lado esquerdo - Informações -->
+        <div class="auth-info">
+            <div class="auth-info-content">
+                <div class="auth-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h1 class="auth-title">Analitcs School</h1>
+                <p class="auth-subtitle">Junte-se a nós e transforme a gestão da sua escola</p>
+                
+                <div class="auth-features">
+                    <div class="auth-feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Cadastro rápido e simples</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Dados protegidos</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="fas fa-clock"></i>
+                        <span>Acesso imediato</span>
+                    </div>
+                </div>
             </div>
-            <p class="login-subtitle">Crie sua conta</p>
         </div>
         
-        <form class="login-form" method="POST" action="{{ url_for('auth.registro') }}">
-            {{ form.hidden_tag() }}
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
-                            <span>{{ message }}</span>
+        <!-- Lado direito - Formulário -->
+        <div class="auth-form-container">
+            <div class="auth-form-card">
+                <!-- Header -->
+                <div class="auth-form-header">
+                    <h2 class="auth-form-title">Criar conta</h2>
+                    <p class="auth-form-desc">Preencha os dados abaixo para criar sua conta</p>
+                </div>
+                
+                <!-- Alertas -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="auth-alert auth-alert-{{ category }}">
+                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}times-circle{% else %}info-circle{% endif %}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Formulário -->
+                <form class="auth-form" method="POST" action="{{ url_for('auth.registro') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Campo Nome -->
+                    <div class="auth-field">
+                        <label class="auth-label" for="nome">
+                            <i class="fas fa-user"></i>
+                            Nome completo
+                        </label>
+                        {{ form.nome(class="auth-input", placeholder="Seu nome completo", id="nome", autocomplete="name") }}
+                        {% if form.nome.errors %}
+                            {% for error in form.nome.errors %}
+                                <span class="auth-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Campo E-mail -->
+                    <div class="auth-field">
+                        <label class="auth-label" for="email">
+                            <i class="fas fa-envelope"></i>
+                            E-mail
+                        </label>
+                        {{ form.email(class="auth-input", placeholder="seu@email.com", id="email", autocomplete="email") }}
+                        {% if form.email.errors %}
+                            {% for error in form.email.errors %}
+                                <span class="auth-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Campo Tipo -->
+                    <div class="auth-field">
+                        <label class="auth-label" for="tipo">
+                            <i class="fas fa-user-tag"></i>
+                            Tipo de usuário
+                        </label>
+                        {{ form.tipo(class="auth-input auth-select", id="tipo") }}
+                        {% if form.tipo.errors %}
+                            {% for error in form.tipo.errors %}
+                                <span class="auth-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Campo Senha -->
+                    <div class="auth-field">
+                        <label class="auth-label" for="senha">
+                            <i class="fas fa-lock"></i>
+                            Senha
+                        </label>
+                        <div class="auth-password-wrapper">
+                            {{ form.senha(class="auth-input", placeholder="Mínimo 6 caracteres", id="senha", autocomplete="new-password") }}
+                            <button type="button" class="auth-password-toggle" aria-label="Mostrar senha">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <div class="form-group">
-                <div class="input-wrapper">
-                    <i class="fas fa-user input-icon"></i>
-                    {{ form.nome(class="form-control", placeholder="Nome completo") }}
+                        {% if form.senha.errors %}
+                            {% for error in form.senha.errors %}
+                                <span class="auth-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Campo Confirmar Senha -->
+                    <div class="auth-field">
+                        <label class="auth-label" for="confirmar_senha">
+                            <i class="fas fa-lock"></i>
+                            Confirmar senha
+                        </label>
+                        <div class="auth-password-wrapper">
+                            {{ form.confirmar_senha(class="auth-input", placeholder="Repita a senha", id="confirmar_senha", autocomplete="new-password") }}
+                            <button type="button" class="auth-password-toggle" aria-label="Mostrar senha">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        {% if form.confirmar_senha.errors %}
+                            {% for error in form.confirmar_senha.errors %}
+                                <span class="auth-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Botão -->
+                    <button type="submit" class="auth-btn">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Criar conta</span>
+                    </button>
+                </form>
+                
+                <!-- Divisor -->
+                <div class="auth-divider">
+                    <span>ou</span>
                 </div>
-                {% if form.nome.errors %}
-                    {% for error in form.nome.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <div class="form-group">
-                <div class="input-wrapper">
-                    <i class="fas fa-envelope input-icon"></i>
-                    {{ form.email(class="form-control", placeholder="Seu e-mail") }}
+                
+                <!-- Link de login -->
+                <div class="auth-nav">
+                    <p>Já tem uma conta?</p>
+                    <a href="{{ url_for('auth.login') }}" class="auth-nav-link">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Fazer login
+                    </a>
                 </div>
-                {% if form.email.errors %}
-                    {% for error in form.email.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-                {% endif %}
             </div>
-            
-            <div class="form-group">
-                <div class="input-wrapper">
-                    <i class="fas fa-user-tag input-icon"></i>
-                    {{ form.tipo(class="form-control form-select", placeholder="Tipo de usuário") }}
-                </div>
-                {% if form.tipo.errors %}
-                    {% for error in form.tipo.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <div class="form-group">
-                <div class="input-wrapper">
-                    <i class="fas fa-lock input-icon"></i>
-                    {{ form.senha(class="form-control", placeholder="Senha") }}
-                </div>
-                {% if form.senha.errors %}
-                    {% for error in form.senha.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <div class="form-group">
-                <div class="input-wrapper">
-                    <i class="fas fa-lock input-icon"></i>
-                    {{ form.confirmar_senha(class="form-control", placeholder="Confirmar senha") }}
-                </div>
-                {% if form.confirmar_senha.errors %}
-                    {% for error in form.confirmar_senha.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <button type="submit" class="btn btn-primary login-btn">
-                <i class="fas fa-user-plus"></i>
-                Criar conta
-            </button>
-        </form>
-        
-        <div class="login-footer">
-            <p>Já tem uma conta? <a href="{{ url_for('auth.login') }}">Faça login</a></p>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-.login-background {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 50%, #1e1b4b 100%);
-}
-
-.floating-symbol {
-    position: absolute;
-    color: rgba(255, 255, 255, 0.1);
-    font-size: 2rem;
-    animation: floatSymbol 25s infinite linear;
-    pointer-events: none;
-    user-select: none;
-}
-
-@keyframes floatSymbol {
-    0% {
-        transform: translateY(100vh) rotate(0deg) scale(1);
-        opacity: 0;
-    }
-    5% {
-        opacity: 0.15;
-    }
-    95% {
-        opacity: 0.15;
-    }
-    100% {
-        transform: translateY(-100vh) rotate(720deg) scale(0.5);
-        opacity: 0;
-    }
-}
-</style>
-
-<script>
-(function() {
-    const symbols = [
-        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-        '+', '−', '×', '÷', '∑', '√', 'π', '∞', 'Δ', 'θ',
-        '∫', '≈', '≠', '±', 'μ', 'σ', 'λ', 'α', 'β', 'γ'
-    ];
-    
-    const background = document.getElementById('loginBackground');
-    const totalSymbols = 40;
-    
-    for (let i = 0; i < totalSymbols; i++) {
-        const symbol = document.createElement('span');
-        symbol.className = 'floating-symbol';
-        symbol.textContent = symbols[Math.floor(Math.random() * symbols.length)];
-        
-        symbol.style.left = Math.random() * 100 + '%';
-        symbol.style.fontSize = (Math.random() * 2 + 1) + 'rem';
-        symbol.style.animationDuration = (Math.random() * 20 + 15) + 's';
-        symbol.style.animationDelay = (Math.random() * 25) + 's';
-        symbol.style.opacity = Math.random() * 0.1 + 0.05;
-        
-        background.appendChild(symbol);
-    }
-})();
-</script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 {% endblock %}
