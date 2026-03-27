@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ aluno.nome }} - Analitcs School{% endblock %}
+{% block page_title %}Aluno: {{ aluno.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <span class="badge badge-{% if aluno.status == 'ativo' %}success{% else %}danger{% endif %}">{{ aluno.status|capitalize }}</span>
+    {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+    <a href="{{ url_for('alunos.editar', id=aluno.id) }}" class="btn btn-outline"><i class="fas fa-edit"></i> Editar</a>
+    {% endif %}
+</div>
+
+<div class="grid grid-3 mb-3">
+    <div class="stat-card"><div class="stat-icon primary"><i class="fas fa-id-card"></i></div><div class="stat-content"><div class="stat-value">{{ aluno.matricula }}</div><div class="stat-label">Matrícula</div></div></div>
+    <div class="stat-card"><div class="stat-icon success"><i class="fas fa-chart-line"></i></div><div class="stat-content"><div class="stat-value">{{ "%.1f"|format(aluno.media_notas()) }}</div><div class="stat-label">Média Geral</div></div></div>
+    <div class="stat-card"><div class="stat-icon info"><i class="fas fa-calendar-check"></i></div><div class="stat-content"><div class="stat-value">{{ "%.1f"|format(aluno.percentual_frequencia()) }}%</div><div class="stat-label">Frequência</div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">Informações Pessoais</h3></div>
+    <div class="card-body">
+        <div class="grid grid-2">
+            <p><strong>E-mail:</strong> {{ aluno.email or '-' }}</p>
+            <p><strong>Telefone:</strong> {{ aluno.telefone or '-' }}</p>
+            <p><strong>CPF:</strong> {{ aluno.cpf or '-' }}</p>
+            <p><strong>Data Nascimento:</strong> {{ aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else '-' }}</p>
+        </div>
+        <p><strong>Endereço:</strong> {{ aluno.endereco or '-' }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Turmas</h3></div>
+    <div class="card-body">
+        {% if aluno.turmas %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Código</th><th>Nome</th><th>Série</th><th>Frequência</th><th>Média</th></tr></thead>
+                <tbody>
+                    {% for turma in aluno.turmas %}
+                    <tr>
+                        <td>{{ turma.codigo }}</td>
+                        <td>{{ turma.nome }}</td>
+                        <td>{{ turma.serie }}</td>
+                        <td>{{ "%.1f"|format(aluno.percentual_frequencia(turma.id)) }}%</td>
+                        <td>{{ "%.1f"|format(aluno.media_notas(turma.id)) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Aluno não está matriculado em nenhuma turma.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

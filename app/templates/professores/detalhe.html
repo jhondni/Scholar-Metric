@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ professor.usuario.nome }} - Analitcs School{% endblock %}
+{% block page_title %}Professor: {{ professor.usuario.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <div>
+        <span class="badge badge-primary">{{ professor.registro }}</span>
+        <span class="badge badge-{% if professor.ativo %}success{% else %}danger{% endif %}">{% if professor.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+    </div>
+    {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+    <a href="{{ url_for('professores.editar', id=professor.id) }}" class="btn btn-outline"><i class="fas fa-edit"></i> Editar</a>
+    {% endif %}
+</div>
+
+<div class="grid grid-3 mb-3">
+    <div class="stat-card"><div class="stat-icon primary"><i class="fas fa-chalkboard-teacher"></i></div><div class="stat-content"><div class="stat-value">{{ professor.especialidade or '-' }}</div><div class="stat-label">Especialidade</div></div></div>
+    <div class="stat-card"><div class="stat-icon success"><i class="fas fa-book"></i></div><div class="stat-content"><div class="stat-value">{{ professor.total_aulas() }}</div><div class="stat-label">Total de Aulas</div></div></div>
+    <div class="stat-card"><div class="stat-icon info"><i class="fas fa-users"></i></div><div class="stat-content"><div class="stat-value">{{ professor.turmas|length }}</div><div class="stat-label">Turmas</div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">Informações</h3></div>
+    <div class="card-body">
+        <div class="grid grid-2">
+            <p><strong>Nome:</strong> {{ professor.usuario.nome }}</p>
+            <p><strong>E-mail:</strong> {{ professor.usuario.email }}</p>
+            <p><strong>CPF:</strong> {{ professor.cpf or '-' }}</p>
+            <p><strong>Telefone:</strong> {{ professor.telefone or '-' }}</p>
+        </div>
+        <p><strong>Formação:</strong> {{ professor.formacao or '-' }}</p>
+        <p><strong>Endereço:</strong> {{ professor.endereco or '-' }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Turmas</h3></div>
+    <div class="card-body">
+        {% if professor.turmas %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Código</th><th>Nome</th><th>Série</th><th>Turno</th></tr></thead>
+                <tbody>
+                    {% for turma in professor.turmas %}
+                    <tr>
+                        <td>{{ turma.codigo }}</td>
+                        <td>{{ turma.nome }}</td>
+                        <td>{{ turma.serie }}</td>
+                        <td>{{ turma.turno|capitalize }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Professor não está associado a nenhuma turma.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

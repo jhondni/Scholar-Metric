@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Aulas - Analitcs School{% endblock %}
+{% block page_title %}Aulas{% endblock %}
+
+{% block content %}
+<div class="list-header">
+    <h2 class="list-title">Aulas</h2>
+    <div class="list-actions">
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" class="form-control" placeholder="Buscar aula..." value="{{ busca }}"></div>
+        <a href="{{ url_for('aulas.novo') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Nova Aula</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if aulas.items %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Data</th><th>Horário</th><th>Matéria</th><th>Turma</th><th>Professor</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>
+                    {% for aula in aulas.items %}
+                    <tr>
+                        <td>{{ aula.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ aula.horario_inicio.strftime('%H:%M') }} - {{ aula.horario_fim.strftime('%H:%M') }}</td>
+                        <td>{{ aula.materia }}</td>
+                        <td>{{ aula.turma.nome }}</td>
+                        <td>{{ aula.professor.usuario.nome }}</td>
+                        <td><span class="badge badge-{% if aula.status == 'agendada' %}primary{% elif aula.status == 'realizada' %}success{% else %}danger{% endif %}">{{ aula.status|capitalize }}</span></td>
+                        <td class="table-actions">
+                            <a href="{{ url_for('aulas.detalhe', id=aula.id) }}" class="btn btn-icon btn-sm btn-outline"><i class="fas fa-eye"></i></a>
+                            <a href="{{ url_for('aulas.editar', id=aula.id) }}" class="btn btn-icon btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-book-open empty-state-icon"></i><h4 class="empty-state-title">Nenhuma aula encontrada</h4></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

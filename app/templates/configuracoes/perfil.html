@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Perfil - Analitcs School{% endblock %}
+{% block page_title %}Editar Perfil{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Editar Perfil</h3></div>
+    <div class="card-body">
+        <form id="formPerfil">
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" name="nome" class="form-control" value="{{ current_user.nome }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" name="telefone" class="form-control" value="{{ current_user.telefone or '' }}">
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+                <a href="{{ url_for('configuracoes.index') }}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('formPerfil').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const response = await fetch('/configuracoes/perfil', { method: 'POST', body: formData });
+    const data = await response.json();
+    if (data.success) {
+        alert(data.message);
+        location.reload();
+    } else {
+        alert(data.error);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Alunos - Analitcs School{% endblock %}
+{% block page_title %}Alunos{% endblock %}
+
+{% block content %}
+<div class="list-header">
+    <h2 class="list-title">Alunos</h2>
+    <div class="list-actions">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" class="form-control" placeholder="Buscar aluno..." id="searchInput" value="{{ busca }}">
+        </div>
+        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+        <a href="{{ url_for('alunos.novo') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Novo Aluno
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if alunos.items %}
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Matrícula</th>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Telefone</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for aluno in alunos.items %}
+                    <tr>
+                        <td><strong>{{ aluno.matricula }}</strong></td>
+                        <td>{{ aluno.nome }}</td>
+                        <td>{{ aluno.email or '-' }}</td>
+                        <td>{{ aluno.telefone or '-' }}</td>
+                        <td>
+                            <span class="badge badge-{% if aluno.status == 'ativo' %}success{% elif aluno.status == 'inativo' %}danger{% else %}warning{% endif %}">
+                                {{ aluno.status|capitalize }}
+                            </span>
+                        </td>
+                        <td class="table-actions">
+                            <a href="{{ url_for('alunos.detalhe', id=aluno.id) }}" class="btn btn-icon btn-sm btn-outline" title="Ver">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+                            <a href="{{ url_for('alunos.editar', id=aluno.id) }}" class="btn btn-icon btn-sm btn-outline" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if alunos.pages > 1 %}
+        <div class="pagination">
+            {% if alunos.has_prev %}
+            <a href="{{ url_for('alunos.index', page=alunos.prev_num, busca=busca) }}" class="pagination-btn">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            {% for p in alunos.iter_pages() %}
+                {% if p %}
+                <a href="{{ url_for('alunos.index', page=p, busca=busca) }}" 
+                   class="pagination-btn {% if p == alunos.page %}active{% endif %}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if alunos.has_next %}
+            <a href="{{ url_for('alunos.index', page=alunos.next_num, busca=busca) }}" class="pagination-btn">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-user-graduate empty-state-icon"></i>
+            <h4 class="empty-state-title">Nenhum aluno encontrado</h4>
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <a href="{{ url_for('alunos.novo') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                Cadastrar Aluno
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        window.location.href = '{{ url_for("alunos.index") }}?busca=' + this.value;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Turmas - Analitcs School{% endblock %}
+{% block page_title %}Turmas{% endblock %}
+
+{% block content %}
+<div class="list-header">
+    <h2 class="list-title">Turmas</h2>
+    <div class="list-actions">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" class="form-control" placeholder="Buscar turma..." id="searchInput" value="{{ busca }}">
+        </div>
+        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+        <a href="{{ url_for('turmas.novo') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Nova Turma
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if turmas.items %}
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Série</th>
+                        <th>Turno</th>
+                        <th>Alunos</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turma in turmas.items %}
+                    <tr>
+                        <td><strong>{{ turma.codigo }}</strong></td>
+                        <td>{{ turma.nome }}</td>
+                        <td>{{ turma.serie }}</td>
+                        <td>{{ turma.turno|capitalize }}</td>
+                        <td>{{ turma.total_alunos() }}/{{ turma.capacidade_maxima }}</td>
+                        <td>
+                            {% if turma.ativa %}
+                            <span class="badge badge-success">Ativa</span>
+                            {% else %}
+                            <span class="badge badge-danger">Inativa</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{{ url_for('turmas.detalhe', id=turma.id) }}" class="btn btn-icon btn-sm btn-outline" title="Ver detalhes">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+                            <a href="{{ url_for('turmas.editar', id=turma.id) }}" class="btn btn-icon btn-sm btn-outline" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginação -->
+        {% if turmas.pages > 1 %}
+        <div class="pagination">
+            {% if turmas.has_prev %}
+            <a href="{{ url_for('turmas.index', page=turmas.prev_num, busca=busca) }}" class="pagination-btn">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            {% for p in turmas.iter_pages() %}
+                {% if p %}
+                <a href="{{ url_for('turmas.index', page=p, busca=busca) }}" 
+                   class="pagination-btn {% if p == turmas.page %}active{% endif %}">
+                    {{ p }}
+                </a>
+                {% else %}
+                <span class="pagination-btn">...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if turmas.has_next %}
+            <a href="{{ url_for('turmas.index', page=turmas.next_num, busca=busca) }}" class="pagination-btn">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-users empty-state-icon"></i>
+            <h4 class="empty-state-title">Nenhuma turma encontrada</h4>
+            <p class="empty-state-text">
+                {% if busca %}
+                    Nenhuma turma corresponde à busca "{{ busca }}".
+                {% else %}
+                    Comece criando sua primeira turma.
+                {% endif %}
+            </p>
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <a href="{{ url_for('turmas.novo') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                Criar Turma
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        window.location.href = '{{ url_for("turmas.index") }}?busca=' + this.value;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Configurações - Analitcs School{% endblock %}
+{% block page_title %}Configurações{% endblock %}
+
+{% block content %}
+<div class="settings-section">
+    <div class="settings-header"><h3 class="settings-title">Aparência</h3></div>
+    <div class="settings-body">
+        <div class="settings-row">
+            <div class="settings-label">
+                <div class="settings-label-title">Tema</div>
+                <div class="settings-label-desc">Escolha entre tema claro ou escuro</div>
+            </div>
+            <div class="theme-switch">
+                <div class="theme-option {% if current_user.tema == 'light' %}active{% endif %}" onclick="setTheme('light')">
+                    <i class="fas fa-sun"></i> Claro
+                </div>
+                <div class="theme-option {% if current_user.tema == 'dark' %}active{% endif %}" onclick="setTheme('dark')">
+                    <i class="fas fa-moon"></i> Escuro
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="settings-section">
+    <div class="settings-header"><h3 class="settings-title">Perfil</h3></div>
+    <div class="settings-body">
+        <form id="formPerfil">
+            <div class="grid grid-2">
+                <div class="form-group"><label class="form-label">Nome</label><input type="text" name="nome" class="form-control" value="{{ current_user.nome }}"></div>
+                <div class="form-group"><label class="form-label">Telefone</label><input type="text" name="telefone" class="form-control" value="{{ current_user.telefone or '' }}"></div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2"><i class="fas fa-save"></i> Salvar Perfil</button>
+        </form>
+    </div>
+</div>
+
+<div class="settings-section">
+    <div class="settings-header"><h3 class="settings-title">Alterar Senha</h3></div>
+    <div class="settings-body">
+        <form id="formSenha">
+            <div class="grid grid-2">
+                <div class="form-group"><label class="form-label">Senha Atual</label><input type="password" name="senha_atual" class="form-control" required></div>
+                <div></div>
+                <div class="form-group"><label class="form-label">Nova Senha</label><input type="password" name="nova_senha" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Confirmar Nova Senha</label><input type="password" name="confirmar_senha" class="form-control" required></div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2"><i class="fas fa-lock"></i> Alterar Senha</button>
+        </form>
+    </div>
+</div>
+
+<div class="settings-section">
+    <div class="settings-header"><h3 class="settings-title">Informações da Conta</h3></div>
+    <div class="settings-body">
+        <p><strong>E-mail:</strong> {{ current_user.email }}</p>
+        <p><strong>Tipo:</strong> {{ current_user.tipo|capitalize }}</p>
+        <p><strong>Membro desde:</strong> {{ current_user.criado_em.strftime('%d/%m/%Y') }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function setTheme(theme) {
+    ThemeManager.setTheme(theme);
+    document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.theme-option[onclick="setTheme('${theme}')"]`).classList.add('active');
+}
+
+document.getElementById('formPerfil').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const response = await fetch('/configuracoes/perfil', { method: 'POST', body: formData });
+    const data = await response.json();
+    alert(data.message || data.error);
+});
+
+document.getElementById('formSenha').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const response = await fetch('/configuracoes/senha', { method: 'POST', body: formData });
+    const data = await response.json();
+    if (data.success) { alert(data.message); this.reset(); } else { alert(data.error); }
+});
+</script>
+{% endblock %}

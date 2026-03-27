@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Análise - Analitcs School{% endblock %}
+{% block page_title %}Análise Inteligente{% endblock %}
+
+{% block content %}
+<div class="analysis-grid">
+    <!-- Estatísticas Gerais -->
+    <div class="analysis-card">
+        <h3 class="analysis-title"><i class="fas fa-chart-pie"></i> Distribuição por Turma</h3>
+        <div class="chart-container"><canvas id="chartTurmas"></canvas></div>
+    </div>
+    
+    <div class="analysis-card">
+        <h3 class="analysis-title"><i class="fas fa-chart-bar"></i> Aulas por Mês</h3>
+        <div class="chart-container"><canvas id="chartAulas"></canvas></div>
+    </div>
+    
+    <!-- Alunos em Risco -->
+    <div class="analysis-card analysis-card-full">
+        <h3 class="analysis-title"><i class="fas fa-exclamation-triangle"></i> Alunos em Risco de Evasão</h3>
+        <div id="alunosRisco"></div>
+    </div>
+    
+    <!-- Desempenho das Turmas -->
+    <div class="analysis-card analysis-card-full">
+        <h3 class="analysis-title"><i class="fas fa-graduation-cap"></i> Desempenho das Turmas</h3>
+        <div class="chart-container"><canvas id="chartDesempenho"></canvas></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    // Carregar dados gerais
+    const response = await fetch('/analise/api/geral');
+    const data = await response.json();
+    
+    // Gráfico de Turmas
+    new Chart(document.getElementById('chartTurmas'), {
+        type: 'doughnut',
+        data: {
+            labels: data.dist_turmas.map(t => t.nome),
+            datasets: [{
+                data: data.dist_turmas.map(t => t.total),
+                backgroundColor: ['#4f46e5','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+    
+    // Gráfico de Aulas
+    new Chart(document.getElementById('chartAulas'), {
+        type: 'bar',
+        data: {
+            labels: data.aulas_por_mes.map(a => a.mes),
+            datasets: [{
+                label: 'Aulas',
+                data: data.aulas_por_mes.map(a => a.total),
+                backgroundColor: 'rgba(79,70,229,0.8)',
+                borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+    
+    // Alunos em Risco
+    const riscoResponse = await fetch('/analise/api/alunos/risco');
+    const alunosRisco = await riscoResponse.json();
+    
+    const riscoHtml = alunosRisco.length ? alunosRisco.map(a => `
+        <div class="risk-indicator ${a.risco}">
+            <div class="risk-icon"><i class="fas fa-exclamation"></i></div>
+            <div class="risk-info">
+                <div class="risk-name">${a.nome} (${a.matricula})</div>
+                <div class="risk-detail">Frequência: ${a.frequencia}% | Média: ${a.media}</div>
+            </div>
+        </div>
+    `).join('') : '<p class="text-muted">Nenhum aluno em risco identificado.</p>';
+    
+    document.getElementById('alunosRisco').innerHTML = riscoHtml;
+    
+    // Desempenho das Turmas
+    const desempenhoResponse = await fetch('/analise/api/turmas/desempenho');
+    const desempenho = await desempenhoResponse.json();
+    
+    new Chart(document.getElementById('chartDesempenho'), {
+        type: 'bar',
+        data: {
+            labels: desempenho.map(t => t.nome),
+            datasets: [
+                { label: 'Média', data: desempenho.map(t => t.media), backgroundColor: 'rgba(79,70,229,0.8)', borderRadius: 4 },
+                { label: 'Frequência', data: desempenho.map(t => t.frequencia), backgroundColor: 'rgba(16,185,129,0.8)', borderRadius: 4 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário - Analitcs School{% endblock %}
+{% block page_title %}Calendário{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="calendar-header">
+        <div class="calendar-nav">
+            <button class="btn btn-icon btn-outline" id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+            <h3 class="calendar-title" id="calendarTitle"></h3>
+            <button class="btn btn-icon btn-outline" id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="calendar-views">
+            <button class="calendar-view-btn active" data-view="month">Mês</button>
+            <button class="calendar-view-btn" data-view="week">Semana</button>
+            <button class="calendar-view-btn" data-view="day">Dia</button>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('calendario.feriados') }}" class="btn btn-outline"><i class="fas fa-flag"></i> Feriados</a>
+            <a href="{{ url_for('calendario.dias_nao_letivos') }}" class="btn btn-outline"><i class="fas fa-calendar-times"></i> Dias Não Letivos</a>
+        </div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid">
+        <div class="calendar-weekday">Dom</div>
+        <div class="calendar-weekday">Seg</div>
+        <div class="calendar-weekday">Ter</div>
+        <div class="calendar-weekday">Qua</div>
+        <div class="calendar-weekday">Qui</div>
+        <div class="calendar-weekday">Sex</div>
+        <div class="calendar-weekday">Sáb</div>
+    </div>
+    <div id="calendarDays"></div>
+</div>
+
+<!-- Legenda -->
+<div class="card mt-3">
+    <div class="card-body">
+        <div class="d-flex gap-3">
+            <div class="d-flex align-center gap-1"><span style="width:12px;height:12px;background:var(--primary);border-radius:2px;"></span> Aula</div>
+            <div class="d-flex align-center gap-1"><span style="width:12px;height:12px;background:var(--error);border-radius:2px;"></span> Feriado</div>
+            <div class="d-flex align-center gap-1"><span style="width:12px;height:12px;background:var(--warning);border-radius:2px;"></span> Dia Não Letivo</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.calendar-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+.calendar-day { min-height: 100px; padding: 0.5rem; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+.calendar-day:nth-child(7n) { border-right: none; }
+.calendar-day.other-month { background: var(--bg-tertiary); opacity: 0.5; }
+.calendar-day.today { background: rgba(79,70,229,0.05); }
+.calendar-day-number { font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
+.calendar-day.today .calendar-day-number { background: var(--primary); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.calendar-event { font-size: 0.625rem; padding: 0.25rem 0.5rem; border-radius: 4px; color: white; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentDate = new Date();
+let currentView = 'month';
+
+const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    document.getElementById('calendarTitle').textContent = `${monthNames[month]} ${year}`;
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+    
+    const prevLastDay = new Date(year, month, 0).getDate();
+    
+    let html = '<div class="calendar-body">';
+    
+    // Dias do mês anterior
+    for (let i = startDay - 1; i >= 0; i--) {
+        html += `<div class="calendar-day other-month"><div class="calendar-day-number">${prevLastDay - i}</div></div>`;
+    }
+    
+    // Dias do mês atual
+    const today = new Date();
+    for (let day = 1; day <= totalDays; day++) {
+        const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        html += `<div class="calendar-day ${isToday ? 'today' : ''}" data-date="${dateStr}"><div class="calendar-day-number">${day}</div><div class="calendar-events" id="events-${dateStr}"></div></div>`;
+    }
+    
+    // Dias do próximo mês
+    const remaining = 42 - (startDay + totalDays);
+    for (let i = 1; i <= remaining; i++) {
+        html += `<div class="calendar-day other-month"><div class="calendar-day-number">${i}</div></div>`;
+    }
+    
+    html += '</div>';
+    document.getElementById('calendarDays').innerHTML = html;
+    
+    loadEvents();
+}
+
+async function loadEvents() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const inicio = `${year}-${String(month+1).padStart(2,'0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const fim = `${year}-${String(month+1).padStart(2,'0')}-${lastDay}`;
+    
+    const response = await fetch(`/calendario/api/eventos?inicio=${inicio}&fim=${fim}`);
+    const eventos = await response.json();
+    
+    eventos.forEach(evento => {
+        const container = document.getElementById(`events-${evento.start.split('T')[0]}`);
+        if (container) {
+            const el = document.createElement('div');
+            el.className = 'calendar-event';
+            el.style.backgroundColor = evento.color;
+            el.textContent = evento.title;
+            container.appendChild(el);
+        }
+    });
+}
+
+document.getElementById('prevMonth').addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+});
+
+document.getElementById('nextMonth').addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+});
+
+document.querySelectorAll('.calendar-view-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.calendar-view-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentView = this.dataset.view;
+    });
+});
+
+renderCalendar();
+</script>
+{% endblock %}

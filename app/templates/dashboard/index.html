@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Analitcs School{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Cards de Estatísticas -->
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_turmas }}</div>
+            <div class="stat-label">Turmas Ativas</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon success">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_alunos }}</div>
+            <div class="stat-label">Alunos Ativos</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_professores }}</div>
+            <div class="stat-label">Professores</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon info">
+            <i class="fas fa-book-open"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ aulas_hoje }}</div>
+            <div class="stat-label">Aulas Hoje</div>
+        </div>
+    </div>
+    
+    <!-- Gráfico -->
+    <div class="card dashboard-chart">
+        <div class="card-header">
+            <h3 class="card-title">Aulas por Semana</h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="chartAulas"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Próximas Aulas -->
+    <div class="card dashboard-table">
+        <div class="card-header">
+            <h3 class="card-title">Próximas Aulas</h3>
+            <a href="{{ url_for('aulas.index') }}" class="btn btn-sm btn-outline">Ver todas</a>
+        </div>
+        <div class="card-body">
+            {% if proximas_aulas %}
+            <ul class="recent-list">
+                {% for aula in proximas_aulas %}
+                <li class="recent-item">
+                    <div class="recent-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="recent-content">
+                        <div class="recent-title">{{ aula.materia }}</div>
+                        <div class="recent-meta">{{ aula.turma.nome }} - {{ aula.professor.usuario.nome }}</div>
+                    </div>
+                    <div class="recent-time">
+                        {{ aula.data.strftime('%d/%m') }}<br>
+                        {{ aula.horario_inicio.strftime('%H:%M') }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-check empty-state-icon"></i>
+                <h4 class="empty-state-title">Nenhuma aula agendada</h4>
+                <p class="empty-state-text">As próximas aulas aparecerão aqui.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Resumo Semanal -->
+    <div class="card dashboard-full">
+        <div class="card-header">
+            <h3 class="card-title">Resumo da Semana</h3>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-4">
+                <div class="text-center">
+                    <div class="stat-value text-primary">{{ aulas_semana }}</div>
+                    <div class="stat-label">Aulas esta semana</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de Aulas
+    const ctx = document.getElementById('chartAulas');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                datasets: [{
+                    label: 'Aulas',
+                    data: [12, 19, 15, 17, 14, 8],
+                    backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

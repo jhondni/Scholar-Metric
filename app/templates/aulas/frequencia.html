@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Frequência - {{ aula.materia }}{% endblock %}
+{% block page_title %}Registro de Frequência{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <div>
+        <h3>{{ aula.materia }}</h3>
+        <p class="text-muted">{{ aula.data.strftime('%d/%m/%Y') }} - {{ aula.horario_inicio.strftime('%H:%M') }} às {{ aula.horario_fim.strftime('%H:%M') }}</p>
+    </div>
+    <a href="{{ url_for('aulas.detalhe', id=aula.id) }}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Voltar</a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">Alunos - {{ aula.turma.nome }}</h3></div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="table">
+                    <thead><tr><th>Nome</th><th>Presente</th><th>Justificativa</th></tr></thead>
+                    <tbody>
+                        {% for aluno in aula.turma.alunos %}
+                        {% set freq = aula.frequencias.filter_by(aluno_id=aluno.id).first() %}
+                        <tr>
+                            <td>{{ aluno.nome }}</td>
+                            <td>
+                                <label class="form-check">
+                                    <input type="checkbox" name="aluno_{{ aluno.id }}" class="form-check-input" {% if not freq or freq.presente %}checked{% endif %}>
+                                    <span class="form-check-label">Presente</span>
+                                </label>
+                            </td>
+                            <td><input type="text" name="justificativa_{{ aluno.id }}" class="form-control" placeholder="Justificativa (opcional)" value="{{ freq.justificativa if freq else '' }}"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar Frequência</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

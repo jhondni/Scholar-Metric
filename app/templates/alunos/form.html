@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Analitcs School{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">{{ titulo }}</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ form.nome.label.text }}</label>
+                    {{ form.nome(class="form-control") }}
+                    {% for error in form.nome.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.matricula.label.text }}</label>
+                    {{ form.matricula(class="form-control", readonly=aluno is defined) }}
+                    {% for error in form.matricula.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_nascimento.label.text }}</label>
+                    {{ form.data_nascimento(class="form-control", type="date") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.cpf.label.text }}</label>
+                    {{ form.cpf(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.email.label.text }}</label>
+                    {{ form.email(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.telefone.label.text }}</label>
+                    {{ form.telefone(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.ano_letivo.label.text }}</label>
+                    {{ form.ano_letivo(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.status.label.text }}</label>
+                    {{ form.status(class="form-control form-select") }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">{{ form.endereco.label.text }}</label>
+                {{ form.endereco(class="form-control", rows=2) }}
+            </div>
+            
+            <h4 class="mt-3 mb-2">Dados do Responsável</h4>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ form.nome_responsavel.label.text }}</label>
+                    {{ form.nome_responsavel(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.telefone_responsavel.label.text }}</label>
+                    {{ form.telefone_responsavel(class="form-control") }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.email_responsavel.label.text }}</label>
+                    {{ form.email_responsavel(class="form-control") }}
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+                <a href="{{ url_for('alunos.index') }}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} - Analitcs School{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="card-title">{{ titulo }}</h3></div>
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="grid grid-2">
+                <div class="form-group"><label class="form-label">{{ form.materia.label.text }}</label>{{ form.materia(class="form-control") }}{% for e in form.materia.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>
+                <div class="form-group"><label class="form-label">{{ form.turma_id.label.text }}</label>{{ form.turma_id(class="form-control form-select") }}{% for e in form.turma_id.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>
+                <div class="form-group"><label class="form-label">{{ form.professor_id.label.text }}</label>{{ form.professor_id(class="form-control form-select") }}{% for e in form.professor_id.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>
+                <div class="form-group"><label class="form-label">{{ form.data.label.text }}</label>{{ form.data(class="form-control", type="date") }}{% for e in form.data.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>
+                <div class="form-group"><label class="form-label">{{ form.horario_inicio.label.text }}</label>{{ form.horario_inicio(class="form-control", type="time") }}{% for e in form.horario_inicio.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>
+                <div class="form-group"><label class="form-label">{{ form.horario_fim.label.text }}</label>{{ form.horario_fim(class="form-control", type="time") }}{% for e in form.horario_fim.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>
+            </div>
+            <div class="form-group"><label class="form-check">{{ form.recorrente(class="form-check-input") }} <span class="form-check-label">Aula Recorrente</span></label></div>
+            <div id="recorrenciaFields" style="display:none;">
+                <div class="grid grid-2">
+                    <div class="form-group"><label class="form-label">{{ form.tipo_recorrencia.label.text }}</label>{{ form.tipo_recorrencia(class="form-control form-select") }}</div>
+                    <div class="form-group"><label class="form-label">{{ form.data_fim_recorrencia.label.text }}</label>{{ form.data_fim_recorrencia(class="form-control", type="date") }}</div>
+                </div>
+            </div>
+            <div class="form-group"><label class="form-label">{{ form.descricao.label.text }}</label>{{ form.descricao(class="form-control", rows=3) }}</div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+                <a href="{{ url_for('aulas.index') }}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('recorrente').addEventListener('change', function() {
+    document.getElementById('recorrenciaFields').style.display = this.checked ? 'block' : 'none';
+});
+if (document.getElementById('recorrente').checked) {
+    document.getElementById('recorrenciaFields').style.display = 'block';
+}
+</script>
+{% endblock %}

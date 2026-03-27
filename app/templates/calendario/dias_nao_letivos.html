@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Dias Não Letivos - Analitcs School{% endblock %}
+{% block page_title %}Dias Não Letivos{% endblock %}
+
+{% block content %}
+<div class="list-header">
+    <h2 class="list-title">Dias Não Letivos</h2>
+    <button class="btn btn-primary" data-modal="modalDia"><i class="fas fa-plus"></i> Novo Registro</button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if dias %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Período</th><th>Nome</th><th>Tipo</th><th>Ações</th></tr></thead>
+                <tbody>
+                    {% for d in dias %}
+                    <tr>
+                        <td>{{ d.data_inicio.strftime('%d/%m/%Y') }} - {{ d.data_fim.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ d.nome }}</td>
+                        <td><span class="badge badge-warning">{{ d.tipo|capitalize }}</span></td>
+                        <td><button class="btn btn-icon btn-sm btn-danger" onclick="excluirDia({{ d.id }})"><i class="fas fa-trash"></i></button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-calendar-times empty-state-icon"></i><h4 class="empty-state-title">Nenhum registro</h4></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalDia">
+    <div class="modal">
+        <div class="modal-header"><h3 class="modal-title">Novo Dia Não Letivo</h3><button class="modal-close"><i class="fas fa-times"></i></button></div>
+        <div class="modal-body">
+            <form id="formDia">
+                <div class="form-group"><label class="form-label">Nome</label><input type="text" name="nome" class="form-control" required></div>
+                <div class="grid grid-2">
+                    <div class="form-group"><label class="form-label">Data Início</label><input type="date" name="data_inicio" class="form-control" required></div>
+                    <div class="form-group"><label class="form-label">Data Fim</label><input type="date" name="data_fim" class="form-control" required></div>
+                </div>
+                <div class="form-group"><label class="form-label">Tipo</label><select name="tipo" class="form-control form-select"><option value="recesso">Recesso</option><option value="evento">Evento</option><option value="planejamento">Planejamento</option><option value="emergencia">Emergência</option></select></div>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('formDia').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    await fetch('/calendario/dias-nao-letivos', { method: 'POST', body: formData });
+    location.reload();
+});
+
+async function excluirDia(id) {
+    if (confirm('Excluir?')) {
+        await fetch(`/calendario/dias-nao-letivos/${id}/excluir`, { method: 'DELETE' });
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

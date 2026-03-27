@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Professores - Analitcs School{% endblock %}
+{% block page_title %}Professores{% endblock %}
+
+{% block content %}
+<div class="list-header">
+    <h2 class="list-title">Professores</h2>
+    <div class="list-actions">
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" class="form-control" placeholder="Buscar professor..." id="searchInput" value="{{ busca }}"></div>
+        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+        <a href="{{ url_for('professores.novo') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Professor</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if professores.items %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Registro</th><th>Nome</th><th>Especialidade</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>
+                    {% for prof in professores.items %}
+                    <tr>
+                        <td><strong>{{ prof.registro }}</strong></td>
+                        <td>{{ prof.usuario.nome }}</td>
+                        <td>{{ prof.especialidade or '-' }}</td>
+                        <td><span class="badge badge-{% if prof.ativo %}success{% else %}danger{% endif %}">{% if prof.ativo %}Ativo{% else %}Inativo{% endif %}</span></td>
+                        <td class="table-actions">
+                            <a href="{{ url_for('professores.detalhe', id=prof.id) }}" class="btn btn-icon btn-sm btn-outline"><i class="fas fa-eye"></i></a>
+                            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+                            <a href="{{ url_for('professores.editar', id=prof.id) }}" class="btn btn-icon btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-chalkboard-teacher empty-state-icon"></i><h4 class="empty-state-title">Nenhum professor encontrado</h4></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}<script>document.getElementById('searchInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') window.location.href = '{{ url_for("professores.index") }}?busca=' + this.value; });</script>{% endblock %}

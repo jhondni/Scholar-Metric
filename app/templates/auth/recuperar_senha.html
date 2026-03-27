@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Recuperar Senha - Analitcs School{% endblock %}
+
+{% block auth_content %}
+<div class="login-container">
+    <div class="login-background" id="loginBackground"></div>
+    
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Analitcs School</span>
+            </div>
+            <p class="login-subtitle">Recupere sua senha</p>
+        </div>
+        
+        <form class="login-form" method="POST" action="{{ url_for('auth.recuperar_senha') }}">
+            {{ form.hidden_tag() }}
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <p class="text-center text-muted mb-3">
+                Digite seu e-mail para receber instruções de recuperação de senha.
+            </p>
+            
+            <div class="form-group">
+                <div class="input-wrapper">
+                    <i class="fas fa-envelope input-icon"></i>
+                    {{ form.email(class="form-control", placeholder="Seu e-mail") }}
+                </div>
+                {% if form.email.errors %}
+                    {% for error in form.email.errors %}
+                        <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <button type="submit" class="btn btn-primary login-btn">
+                <i class="fas fa-paper-plane"></i>
+                Enviar instruções
+            </button>
+        </form>
+        
+        <div class="login-footer">
+            <p>Lembrou sua senha? <a href="{{ url_for('auth.login') }}">Faça login</a></p>
+        </div>
+    </div>
+</div>
+
+<style>
+.login-background {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 50%, #1e1b4b 100%);
+}
+
+.floating-symbol {
+    position: absolute;
+    color: rgba(255, 255, 255, 0.1);
+    font-size: 2rem;
+    animation: floatSymbol 25s infinite linear;
+    pointer-events: none;
+    user-select: none;
+}
+
+@keyframes floatSymbol {
+    0% {
+        transform: translateY(100vh) rotate(0deg) scale(1);
+        opacity: 0;
+    }
+    5% {
+        opacity: 0.15;
+    }
+    95% {
+        opacity: 0.15;
+    }
+    100% {
+        transform: translateY(-100vh) rotate(720deg) scale(0.5);
+        opacity: 0;
+    }
+}
+</style>
+
+<script>
+(function() {
+    const symbols = ['?', '!', '@', '#', '%', '&', '*', '+', '-', '='];
+    
+    const background = document.getElementById('loginBackground');
+    const totalSymbols = 30;
+    
+    for (let i = 0; i < totalSymbols; i++) {
+        const symbol = document.createElement('span');
+        symbol.className = 'floating-symbol';
+        symbol.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        
+        symbol.style.left = Math.random() * 100 + '%';
+        symbol.style.fontSize = (Math.random() * 2 + 1) + 'rem';
+        symbol.style.animationDuration = (Math.random() * 20 + 15) + 's';
+        symbol.style.animationDelay = (Math.random() * 25) + 's';
+        symbol.style.opacity = Math.random() * 0.1 + 0.05;
+        
+        background.appendChild(symbol);
+    }
+})();
+</script>
+{% endblock %}
