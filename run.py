@@ -1,4 +1,12 @@
-# run.py - Ponto de entrada do Analitcs School
+# run.py - Script de execução alternativo do Analitcs School
+#
+# Este arquivo mantém compatibilidade com execuções anteriores.
+# O entrypoint principal agora é app.py (recomendado pelo Flask CLI).
+#
+# Formas de execução:
+#   python run.py          - Execução direta (legado)
+#   flask run              - Flask CLI (usa app.py automaticamente)
+#   python app.py          - Execução direta (recomendado)
 
 import os
 import sys
@@ -34,6 +42,7 @@ def main():
         print("[OK] Aplicação iniciada com sucesso!")
         print("[INFO] Acesse: http://localhost:5000")
         print("[INFO] Para encerrar: Ctrl+C")
+        print("[DICA] Para usar Flask CLI: flask run")
         print("-" * 45)
         
         app.run(host='0.0.0.0', port=5000, debug=True)

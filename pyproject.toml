@@ -1,0 +1,81 @@
+# pyproject.toml - Configuração do Projeto Analitcs School
+#
+# Este arquivo define:
+# - Metadados do projeto
+# - Dependências
+# - Scripts de execução (entrypoints)
+
+[project]
+name = "analitcs-school"
+version = "2.0.0"
+description = "Sistema de Gestão Escolar Inteligente"
+readme = "PROJECT_CONTEXT.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+
+authors = [
+    {name = "Analitcs School Team"},
+]
+
+keywords = [
+    "flask",
+    "gestao-escolar",
+    "sistema-academico",
+    "python",
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Flask",
+    "Programming Language :: Python :: 3",
+    "Topic :: Education",
+]
+
+# Dependências do projeto
+dependencies = [
+    "Flask==3.0.0",
+    "Flask-SQLAlchemy==3.1.1",
+    "Flask-Login==0.6.3",
+    "Flask-WTF==1.2.1",
+    "Flask-Migrate==4.0.5",
+    "Flask-CORS==4.0.0",
+    "psycopg2-binary==2.9.9",
+    "SQLAlchemy==2.0.23",
+    "Werkzeug==3.0.1",
+    "bcrypt==4.1.2",
+    "python-dotenv==1.0.0",
+    "WTForms==3.1.1",
+    "email-validator==2.1.0",
+    "python-dateutil==2.8.2",
+]
+
+# Scripts de execução (entrypoints)
+# Estes são os comandos que funcionam após: pip install -e .
+[project.scripts]
+# Executar com: analitcs-school
+analitcs-school = "app:app.run"
+
+# Configuração do build system
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Configuração do setuptools
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# ==========================================
+# CONFIGURAÇÕES DO FLASK
+# ==========================================
+
+[tool.flask]
+# O Flask CLI lê estas configurações
+app = "app:app"
+debug = true
+
+# ==========================================
+# SCRIPTS DE DESENVOLVIMENTO
+# ==========================================
+
+# Para usar estes scripts, instale: pip install hatch
+# Ou use diretamente com: python -m <script>

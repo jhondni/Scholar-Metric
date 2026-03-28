@@ -621,7 +621,7 @@ Requisição HTTP → Flask Router → Controller → Model (DB) → Template (V
 pip install -r requirements.txt
 ```
 
-### 2. Configurar PostgreSQL
+### 2. Configurar PostgreSQL (opcional - SQLite é usado como fallback)
 ```bash
 # Criar banco de dados
 createdb analitcs_school
@@ -648,8 +648,21 @@ flask db upgrade
 ```
 
 ### 5. Executar aplicação
+
+#### Método A: Flask CLI (RECOMENDADO)
 ```bash
-python3 run.py
+# O .flaskenv já configura FLASK_APP automaticamente
+flask run
+```
+
+#### Método B: Execução direta via app.py
+```bash
+python app.py
+```
+
+#### Método C: Execução via run.py (legado)
+```bash
+python run.py
 ```
 
 ### 6. Acessar
@@ -663,6 +676,56 @@ Email: joao@escola.com
 Senha: 1234
 Tipo: diretora (acesso total)
 ```
+
+---
+
+## 🐞 Resolução de Problemas
+
+### Erro: "No flask entrypoint found"
+
+#### Causa
+O erro ocorre quando o Flask CLI (`flask run`) não consegue encontrar a instância da aplicação Flask. Isso acontece porque:
+
+1. Não existe arquivo `app.py` na raiz do projeto
+2. A variável de ambiente `FLASK_APP` não está configurada corretamente
+3. A variável `app` está encapsulada dentro de uma função (não acessível no escopo global)
+
+#### Solução Aplicada
+
+**Arquivo `app.py` (Entrypoint Principal):**
+```python
+# app.py cria a instância 'app' no escopo global
+from app import create_app
+app = create_app('development')
+```
+
+**Arquivo `.flaskenv` (Configuração Automática):**
+```bash
+FLASK_APP=app.py
+FLASK_ENV=development
+```
+
+**Arquivo `pyproject.toml` (Scripts de Projeto):**
+```toml
+[project.scripts]
+analitcs-school = "app:app.run"
+```
+
+#### Como Funciona
+
+| Método | Arquivo | Variável `app` | Funciona com `flask run` |
+|--------|---------|----------------|--------------------------|
+| `app.py` | Raiz | Global | ✅ Sim |
+| `.flaskenv` | Config | Define `FLASK_APP` | ✅ Sim |
+| `pyproject.toml` | Config | Script registrado | ✅ Sim |
+| `run.py` | Raiz | Dentro de função | ❌ Não (apenas `python run.py`) |
+
+#### Prevenção Futura
+
+1. Sempre manter `app.py` na raiz do projeto Flask
+2. Manter `.flaskenv` com `FLASK_APP=app.py`
+3. Usar factory pattern mas expor `app` no módulo principal
+4. Testar com `flask routes` após mudanças
 
 ---
 
@@ -689,6 +752,25 @@ Tipo: diretora (acesso total)
 ---
 
 ## 📋 Changelog
+
+### Versão 2.0.1 (28/03/2026)
+
+#### 🐞 Correção de Entrypoint Flask
+- **Problema**: Erro "No flask entrypoint found" ao executar `flask run`
+- **Causa**: A variável `app` estava encapsulada em função `main()` em `run.py`
+- **Solução**:
+  - Criado `app.py` como entrypoint principal com `app` no escopo global
+  - Criado `.flaskenv` com configurações automáticas do Flask CLI
+  - Criado `pyproject.toml` com definição de scripts
+  - Atualizado `.env.example` com `FLASK_APP=app.py`
+  - Atualizado `run.py` com documentação de compatibilidade
+- **Arquivos criados**:
+  - `app.py` - Entrypoint principal
+  - `.flaskenv` - Variáveis de ambiente Flask
+  - `pyproject.toml` - Configuração do projeto
+- **Arquivos modificados**:
+  - `.env.example` - FLASK_APP corrigido
+  - `run.py` - Documentação atualizada
 
 ### Versão 2.0.0 (28/03/2026)
 
