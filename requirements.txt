@@ -1,5 +1,6 @@
 # requirements.txt - Analitcs School
 # Dependências do projeto
+# Compatível com Vercel Serverless Functions (Python 3.9+)
 
 # Framework
 Flask==3.0.0
@@ -24,3 +25,6 @@ email-validator==2.1.0
 
 # Utilitários
 python-dateutil==2.8.2
+
+# Servidor WSGI para produção (não usado na Vercel, mas útil para outros deploys)
+gunicorn==21.2.0

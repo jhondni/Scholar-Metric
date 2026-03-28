@@ -679,6 +679,69 @@ Tipo: diretora (acesso total)
 
 ---
 
+## ☁️ Deploy na Vercel
+
+### Pré-requisitos
+1. Conta na [Vercel](https://vercel.com)
+2. Projeto configurado com PostgreSQL (ex: Supabase, Neon, Railway, Render)
+3. Repositório no GitHub/GitLab/Bitbucket
+
+### Passos para Deploy
+
+#### 1. Configurar variáveis de ambiente na Vercel
+No painel da Vercel, vá em **Settings → Environment Variables** e adicione:
+
+| Variável | Valor | Obrigatória |
+|----------|-------|-------------|
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` | Sim |
+| `SECRET_KEY` | Uma string aleatória segura | Sim |
+| `FLASK_ENV` | `production` | Não |
+
+#### 2. Conectar repositório
+- Clique em "Add New..." → "Project"
+- Selecione o repositório
+- A Vercel detectará automaticamente o `api/index.py`
+
+#### 3. Deploy
+- Clique em "Deploy"
+- A Vercel instalará as dependências e fará o deploy
+
+#### 4. Verificar
+- Acesse a URL fornecida pela Vercel
+- Verifique se `/auth/login` funciona
+
+### Estrutura de Deploy na Vercel
+
+```
+projeto/
+├── api/
+│   └── index.py          ← Entrypoint serverless
+├── app/
+│   ├── static/           ← Servido estaticamente
+│   ├── templates/
+│   ├── controllers/
+│   └── models/
+├── vercel.json           ← Configuração de roteamento
+├── .vercelignore         ← Arquivos excluídos
+├── runtime.txt           ← Versão Python
+└── requirements.txt      ← Dependências
+```
+
+### Variáveis de Ambiente por Ambiente
+
+| Ambiente | `DATABASE_URL` | `FLASK_ENV` | `SECRET_KEY` |
+|----------|---------------|-------------|--------------|
+| Local (dev) | PostgreSQL ou SQLite | `development` | Qualquer |
+| Vercel (prod) | PostgreSQL obrigatório | `production` | Segura e única |
+
+### Provedores de PostgreSQL Recomendados (Gratuitos)
+- [Supabase](https://supabase.com) - 500MB gratuito
+- [Neon](https://neon.tech) - 512MB gratuito
+- [Railway](https://railway.app) - 5$/mês (trial grátis)
+- [Render](https://render.com) - 90 dias gratuito
+
+---
+
 ## 🐞 Resolução de Problemas
 
 ### Erro: "No flask entrypoint found"
@@ -729,6 +792,99 @@ analitcs-school = "app:app.run"
 
 ---
 
+### Erro: "500 INTERNAL_SERVER_ERROR - FUNCTION_INVOCATION_FAILED" (Vercel)
+
+#### Causa
+Este erro ocorre quando a Serverless Function da Vercel falha durante a inicialização. Causas principais:
+
+1. **Sem `vercel.json`** - Vercel não sabe como rotear requisições
+2. **Sem entrypoint serverless** - Falta `api/index.py` para Vercel
+3. **Timeout de conexão ao banco** - `config.py` tenta conectar ao PostgreSQL durante importação
+4. **SQLite em diretório read-only** - Vercel só permite escrita em `/tmp`
+5. **SESSION_TYPE = 'filesystem'** - Filesystem é read-only em serverless
+
+#### Solução Aplicada
+
+**1. Arquivo `vercel.json` (Roteamento):**
+```json
+{
+  "version": 2,
+  "builds": [
+    {"src": "api/index.py", "use": "@vercel/python"},
+    {"src": "app/static/**", "use": "@vercel/static"}
+  ],
+  "routes": [
+    {"src": "/static/(.*)", "dest": "/app/static/$1"},
+    {"src": "/(.*)", "dest": "api/index.py"}
+  ]
+}
+```
+
+**2. Arquivo `api/index.py` (Entrypoint Serverless):**
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ.setdefault('FLASK_ENV', 'production')
+from app import create_app
+app = create_app('production')
+```
+
+**3. Refatoração de `config.py`:**
+- Adicionada função `is_serverless()` para detectar ambiente Vercel
+- `get_database_uri()` agora NÃO testa conexão em serverless
+- SQLite fallback usa `/tmp` em serverless
+- Suporte a `postgres://` → `postgresql://` (Render/Railway)
+
+**4. Correção em `app/__init__.py`:**
+- `db.create_all()` não falha silenciosamente em serverless
+- Upload folder não é criado em serverless
+
+**5. Arquivo `.vercelignore`:**
+- Exclui `.env`, `.venv`, `__pycache__`, `instance/` do deploy
+
+**6. Arquivo `runtime.txt`:**
+- Especifica Python 3.11.6
+
+#### Variáveis de Ambiente na Vercel
+
+Configure no painel da Vercel (Settings → Environment Variables):
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `DATABASE_URL` | URI do PostgreSQL | `postgresql://user:pass@host:5432/db` |
+| `SECRET_KEY` | Chave secreta do Flask | `sua-chave-secreta-aqui` |
+| `FLASK_ENV` | Ambiente | `production` |
+
+#### Estrutura de Deploy
+
+```
+projeto/
+├── api/
+│   └── index.py          # Entrypoint serverless (Vercel)
+├── app/
+│   ├── __init__.py       # Factory Flask
+│   ├── controllers/      # Blueprints
+│   ├── models/           # SQLAlchemy
+│   ├── templates/        # Jinja2
+│   └── static/           # CSS/JS/Images
+├── app.py                # Entrypoint local (flask run)
+├── config.py             # Configurações (detecta serverless)
+├── vercel.json           # Configuração Vercel
+├── .vercelignore         # Arquivos excluídos do deploy
+├── runtime.txt           # Versão do Python
+└── requirements.txt      # Dependências
+```
+
+#### Prevenção Futura
+
+1. Sempre testar com `FLASK_ENV=production` localmente antes de deploy
+2. Usar `is_serverless()` para lógica condicional
+3. Nunca fazer I/O de filesystem em serverless (exceto `/tmp`)
+4. Usar PostgreSQL em produção (não SQLite)
+5. Configurar variáveis de ambiente na Vercel antes do deploy
+
+---
+
 ## 📝 Notas Técnicas
 
 ### Segurança
@@ -752,6 +908,43 @@ analitcs-school = "app:app.run"
 ---
 
 ## 📋 Changelog
+
+### Versão 2.0.2 (28/03/2026)
+
+#### 🐞 Correção de Deploy na Vercel (Serverless)
+- **Problema**: Erro `500: FUNCTION_INVOCATION_FAILED` ao acessar a aplicação na Vercel
+- **Causas identificadas**:
+  - Ausência de `vercel.json` para roteamento
+  - Ausência de `api/index.py` como entrypoint serverless
+  - `config.py` tentava conectar ao PostgreSQL durante importação (timeout)
+  - SQLite fallback gravava em diretório read-only
+  - `SESSION_TYPE = 'filesystem'` incompatível com serverless
+- **Solução**:
+  - Criado `vercel.json` com configuração de builds e routes
+  - Criado `api/index.py` como entrypoint para Vercel
+  - Refatorado `config.py` com detecção de ambiente serverless (`is_serverless()`)
+  - Corrigido `get_database_uri()` para não testar conexão em serverless
+  - SQLite fallback usa `/tmp` em ambiente serverless
+  - `ProductionConfig` usa sessão via cookies (não filesystem)
+  - Criado `.vercelignore` para excluir arquivos desnecessários
+  - Criado `runtime.txt` especificando Python 3.11.6
+  - Atualizado `requirements.txt` com gunicorn
+- **Arquivos criados**:
+  - `vercel.json` - Configuração de deploy Vercel
+  - `api/index.py` - Entrypoint serverless
+  - `.vercelignore` - Arquivos excluídos do deploy
+  - `runtime.txt` - Versão Python
+- **Arquivos modificados**:
+  - `config.py` - Detecção de ambiente serverless, lógica de DB resiliente
+  - `app/__init__.py` - Tratamento de erros em serverless
+  - `requirements.txt` - Adicionado gunicorn
+
+#### Variáveis de Ambiente Necessárias na Vercel
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `DATABASE_URL` | Sim | URI PostgreSQL (ex: `postgresql://user:pass@host:5432/db`) |
+| `SECRET_KEY` | Sim | Chave secreta do Flask |
+| `FLASK_ENV` | Não | Padrão: `production` |
 
 ### Versão 2.0.1 (28/03/2026)
 
