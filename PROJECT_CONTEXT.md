@@ -200,6 +200,22 @@ projeto/
 │   │   ├── calendario_controller.py
 │   │   ├── configuracoes_controller.py
 │   │   └── analise_controller.py
+│   ├── repositories/            # Camada de Acesso a Dados (Supabase)
+│   │   ├── __init__.py
+│   │   ├── base_repository.py   # CRUD genérico
+│   │   ├── usuario_repository.py
+│   │   ├── aluno_repository.py
+│   │   ├── professor_repository.py
+│   │   ├── turma_repository.py
+│   │   ├── aula_repository.py
+│   │   ├── materia_repository.py
+│   │   ├── frequencia_repository.py
+│   │   ├── nota_repository.py
+│   │   ├── feriado_repository.py
+│   │   └── escola_repository.py
+│   ├── services/                # Serviços de Negócio
+│   │   ├── supabase_client.py   # Cliente Supabase
+│   │   └── gerador_calendario.py
 │   ├── views/                   # Views (Helpers/Utilitários)
 │   ├── static/
 │   │   ├── css/
@@ -242,7 +258,19 @@ O projeto segue o padrão **Model-View-Controller (MVC)**:
 ### Fluxo de Requisições
 
 ```
-Requisição HTTP → Flask Router → Controller → Model (DB) → Template (View) → Resposta HTML
+Requisição HTTP → Flask Router → Controller → Repository (Supabase REST) → Resposta
+                                    ↓
+                              Model (SQLAlchemy - legado)
+```
+
+**Fluxo com Supabase (novo):**
+```
+Requisição → Controller → Repository → Supabase Client → REST API → Supabase DB
+```
+
+**Fluxo legado (SQLAlchemy - ainda suportado):**
+```
+Requisição → Controller → Model (SQLAlchemy) → SQLite/PostgreSQL → Resposta
 ```
 
 ---
@@ -604,9 +632,10 @@ Requisição HTTP → Flask Router → Controller → Model (DB) → Template (V
 6. **Tema**: Respeitar variáveis CSS do sistema de temas
 
 ### Contexto Resumido
-- Flask + SQLAlchemy + PostgreSQL
-- MVC com Blueprints
+- Flask + SQLAlchemy + Supabase (REST API)
+- MVC com Blueprints + Camada de Repositório
 - Flask-Login para autenticação
+- Supabase-py para acesso a dados via REST API
 - WTForms para formulários
 - Chart.js para gráficos
 - CSS Variables para temas
@@ -739,6 +768,67 @@ projeto/
 - [Neon](https://neon.tech) - 512MB gratuito
 - [Railway](https://railway.app) - 5$/mês (trial grátis)
 - [Render](https://render.com) - 90 dias gratuito
+
+---
+
+## 🔄 Exportação SQLite → Supabase (SQL)
+
+### Estratégia
+O script `scripts/export_to_supabase.py` gera um arquivo SQL completo que pode ser executado diretamente no SQL Editor do Supabase.
+
+### O que o Script Faz
+1. Conecta ao banco SQLite local
+2. Extrai schemas e dados de todas as tabelas
+3. Converte tipos SQLite → PostgreSQL
+4. Gera CREATE TABLE com constraints corretos
+5. Gera INSERT INTO para todos os registros
+6. Reseta sequences após inserção
+
+### Conversões Realizadas
+
+| SQLite | PostgreSQL | Observação |
+|--------|------------|------------|
+| `INTEGER PRIMARY KEY` | `SERIAL` | Auto-increment |
+| `INTEGER` (PK composto) | `INTEGER NOT NULL` | Chave composta |
+| `DATETIME` | `TIMESTAMP` | Tipo de data |
+| `BOOLEAN` (0/1) | `BOOLEAN` | Compatível |
+| `VARCHAR(n)` | `VARCHAR(n)` | Compatível |
+| `TEXT` | `TEXT` | Compatível |
+| `FLOAT` | `DOUBLE PRECISION` | Precisão maior |
+
+### Como Usar
+
+```bash
+# 1. Gerar o arquivo SQL
+python scripts/export_to_supabase.py
+
+# 2. O arquivo export_supabase.sql será criado na raiz
+
+# 3. No Supabase:
+#    - Acesse SQL Editor
+#    - Clique em "New Query"
+#    - Cole o conteúdo de export_supabase.sql
+#    - Clique em "Run"
+```
+
+### Estrutura do Arquivo SQL Gerado
+
+```sql
+-- Cabeçalho com metadados
+-- DROP TABLE IF EXISTS (para re-execução)
+-- CREATE TABLE (15 tabelas com constraints)
+-- Índices únicos
+-- Desabilitar FK checks temporariamente
+-- INSERT INTO (387 registros)
+-- Reabilitar FK checks
+-- Resetar sequences
+```
+
+### Validação
+- Total de tabelas: 15
+- Total de registros: 387
+- Foreign keys preservadas
+- Chaves primárias compostas tratadas corretamente
 
 ---
 
@@ -885,6 +975,126 @@ projeto/
 
 ---
 
+## ☁️ Integração com Supabase (REST API)
+
+### Visão Geral
+O sistema utiliza o Supabase como backend via REST API, mantendo compatibilidade total com a arquitetura MVC existente.
+
+### Configuração
+
+#### Variáveis de Ambiente (.env)
+```env
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua-anon-key-aqui
+```
+
+#### Bibliotecas Utilizadas
+- **supabase==2.0.0**: Cliente Python para Supabase REST API
+- **postgrest**: Cliente PostgreSQL REST
+- **gotrue**: Autenticação Supabase
+- **storage3**: Storage Supabase
+- **realtime**: Realtime Supabase
+
+### Arquitetura de Acesso aos Dados
+
+#### Camada de Serviço (`app/services/`)
+```
+app/services/
+├── supabase_client.py        # Cliente Supabase singleton
+└── gerador_calendario.py     # Serviço existente
+```
+
+**supabase_client.py:**
+- `get_supabase_client()`: Retorna instância singleton do cliente Supabase
+- `test_connection()`: Testa conexão com Supabase
+- `is_supabase_configured()`: Verifica se as variáveis estão configuradas
+
+#### Camada de Repositório (`app/repositories/`)
+```
+app/repositories/
+├── __init__.py               # Exportações
+├── base_repository.py        # CRUD genérico
+├── usuario_repository.py     # Operações com usuários
+├── aluno_repository.py       # Operações com alunos
+├── professor_repository.py   # Operações com professores
+├── turma_repository.py       # Operações com turmas
+├── aula_repository.py        # Operações com aulas
+├── materia_repository.py     # Operações com matérias
+├── frequencia_repository.py  # Operações com frequências
+├── nota_repository.py        # Operações com notas
+├── feriado_repository.py     # Operações com feriados e dias não letivos
+└── escola_repository.py      # Operações com escolas
+```
+
+**BaseRepository** (operações genéricas):
+- `get_all()`: Lista registros com filtros, ordenação e paginação
+- `get_by_id()`: Busca por ID
+- `get_by_field()`: Busca por campo específico
+- `get_one_by_field()`: Busca único registro por campo
+- `create()`: Cria novo registro
+- `update()`: Atualiza registro existente
+- `delete()`: Remove registro
+- `count()`: Conta registros
+- `exists()`: Verifica existência
+- `upsert()`: Insere ou atualiza
+
+**Repositórios Específicos** (operações especializadas):
+- Cada repositório herda de BaseRepository
+- Adiciona métodos específicos para a entidade
+- Ex: `UsuarioRepository.get_by_email()`, `AlunoRepository.get_by_turma()`
+
+### Uso nos Controllers
+
+```python
+from app.repositories import UsuarioRepository, AlunoRepository
+
+# Instanciar repositórios
+usuario_repo = UsuarioRepository()
+aluno_repo = AlunoRepository()
+
+# Operações CRUD
+usuarios = usuario_repo.get_all()
+usuario = usuario_repo.get_by_email('email@exemplo.com')
+novo_aluno = aluno_repo.create({'nome': 'João', 'matricula': '2026001'})
+
+# Operações especializadas
+alunos_turma = aluno_repo.get_by_turma(turma_id=1)
+stats = aluno_repo.get_aluno_stats(aluno_id=1)
+```
+
+### Boas Práticas de Segurança
+
+1. **Variáveis de Ambiente**:
+   - NUNCA expor `SUPABASE_ANON_KEY` no código
+   - Usar `.env` para desenvolvimento
+   - Configurar variáveis no painel do provedor (Vercel, Railway, etc.)
+
+2. **Row Level Security (RLS)**:
+   - A anon key é segura para uso no frontend
+   - RLS protege os dados no Supabase
+   - Configurar políticas RLS no painel do Supabase
+
+3. **Autenticação**:
+   - Manter Flask-Login para autenticação local
+   - Supabase Auth disponível para autenticação futura
+
+### Migração Gradual
+
+O sistema suporta migração gradual:
+1. **Fase 1**: SQLite local (desenvolvimento) + Repositórios Supabase (disponíveis)
+2. **Fase 2**: Controllers podem usar repositórios Supabase
+3. **Fase 3**: Migração completa para Supabase (remover SQLAlchemy)
+
+### Como Obter a Chave Supabase
+
+1. Acesse [Supabase Dashboard](https://supabase.com/dashboard)
+2. Selecione seu projeto
+3. Vá em **Settings → API**
+4. Copie a chave **anon public** (formato JWT: `eyJ...`)
+5. Cole em `.env` como `SUPABASE_ANON_KEY`
+
+---
+
 ## 📝 Notas Técnicas
 
 ### Segurança
@@ -908,6 +1118,75 @@ projeto/
 ---
 
 ## 📋 Changelog
+
+### Versão 2.2.0 (28/03/2026)
+
+#### ✅ Integração com Supabase (REST API)
+- **Cliente Supabase**: `app/services/supabase_client.py`
+  - Inicialização singleton do cliente Supabase
+  - Teste de conexão automático
+  - Detecção de configuração
+- **Camada de Repositório**: `app/repositories/`
+  - `BaseRepository`: CRUD genérico via REST API
+  - 10 repositórios específicos para cada entidade
+  - Operações especializadas por entidade
+- **Configuração**:
+  - `SUPABASE_URL` e `SUPABASE_ANON_KEY` no `.env`
+  - Configuração em `config.py`
+  - `.env.example` atualizado
+- **Dependências**:
+  - `supabase==2.0.0` adicionado ao `requirements.txt`
+- **Segurança**:
+  - Variáveis de ambiente para credenciais
+  - Nunca expor chaves no código
+  - Compatível com RLS do Supabase
+
+#### Arquivos Criados
+- `app/services/supabase_client.py` - Cliente Supabase
+- `app/repositories/__init__.py` - Exportações
+- `app/repositories/base_repository.py` - CRUD genérico
+- `app/repositories/usuario_repository.py` - Usuários
+- `app/repositories/aluno_repository.py` - Alunos
+- `app/repositories/professor_repository.py` - Professores
+- `app/repositories/turma_repository.py` - Turmas
+- `app/repositories/aula_repository.py` - Aulas
+- `app/repositories/materia_repository.py` - Matérias
+- `app/repositories/frequencia_repository.py` - Frequências
+- `app/repositories/nota_repository.py` - Notas
+- `app/repositories/feriado_repository.py` - Feriados e Dias Não Letivos
+- `app/repositories/escola_repository.py` - Escolas
+
+#### Arquivos Modificados
+- `config.py` - Adicionado SUPABASE_URL e SUPABASE_ANON_KEY
+- `.env` - Adicionado credenciais Supabase
+- `.env.example` - Atualizado com Supabase
+- `requirements.txt` - Adicionado supabase
+- `PROJECT_CONTEXT.md` - Seção de integração Supabase
+
+#### ⚠️ Ação Necessária
+- Atualizar `SUPABASE_ANON_KEY` no `.env` com a chave correta do painel Supabase
+- A chave deve ser obtida em: Supabase Dashboard → Settings → API → anon public key
+
+### Versão 2.1.1 (28/03/2026)
+
+#### ✅ Exportação SQL para Supabase
+- **Script**: `scripts/export_to_supabase.py`
+  - Converte SQLite → PostgreSQL automaticamente
+  - Gera arquivo `export_supabase.sql` pronto para o SQL Editor do Supabase
+  - Trata tipos de dados, chaves primárias compostas e foreign keys
+  - Escapa strings e trata valores NULL corretamente
+- **Arquivo gerado**: `export_supabase.sql`
+  - 15 tabelas
+  - 387 registros
+  - 109.7 KB
+- **Correções aplicadas**:
+  - Tabelas de junção usam INTEGER (não SERIAL) com PRIMARY KEY composta
+  - Sequences resetadas apenas para tabelas com PK simples
+  - Foreign keys preservadas com constraints corretos
+
+#### Arquivos Criados
+- `scripts/export_to_supabase.py` - Script de exportação
+- `export_supabase.sql` - SQL gerado para Supabase
 
 ### Versão 2.0.2 (28/03/2026)
 
