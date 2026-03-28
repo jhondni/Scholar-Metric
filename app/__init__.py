@@ -55,6 +55,7 @@ def create_app(config_name='default'):
     from app.controllers.calendario_controller import calendario_bp
     from app.controllers.configuracoes_controller import configuracoes_bp
     from app.controllers.analise_controller import analise_bp
+    from app.controllers.materias_controller import materias_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -65,6 +66,7 @@ def create_app(config_name='default'):
     app.register_blueprint(calendario_bp)
     app.register_blueprint(configuracoes_bp)
     app.register_blueprint(analise_bp)
+    app.register_blueprint(materias_bp)
     
     # Registrar handlers de erro
     register_error_handlers(app)

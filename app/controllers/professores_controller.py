@@ -9,6 +9,7 @@ from wtforms.validators import DataRequired, Length, Optional
 from app import db
 from app.models.professor import Professor
 from app.models.usuario import Usuario
+from app.models.materia import Materia
 
 professores_bp = Blueprint('professores', __name__, url_prefix='/professores')
 
@@ -199,3 +200,75 @@ def adicionar_disponibilidade(id):
         flash('Preencha os horários', 'error')
     
     return redirect(url_for('professores.detalhe', id=professor.id))
+
+
+# ==================== Matérias do Professor ====================
+
+@professores_bp.route('/<int:id>/materias', methods=['GET', 'POST'])
+@login_required
+def materias(id):
+    """Gerenciar matérias que o professor pode lecionar."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        flash('Sem permissão para gerenciar matérias de professores', 'error')
+        return redirect(url_for('professores.index'))
+    
+    professor = Professor.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        materia_ids = request.form.getlist('materias')
+        
+        # Limpar matérias atuais
+        professor.materias.clear()
+        
+        # Adicionar novas matérias
+        for mid in materia_ids:
+            materia = Materia.query.get(int(mid))
+            if materia:
+                professor.materias.append(materia)
+        
+        db.session.commit()
+        flash('Matérias do professor atualizadas com sucesso', 'success')
+        return redirect(url_for('professores.detalhe', id=professor.id))
+    
+    materias = Materia.query.filter_by(ativa=True).order_by(Materia.nome).all()
+    return render_template('professores/materias.html', professor=professor, materias=materias)
+
+
+@professores_bp.route('/<int:id>/materias/adicionar', methods=['POST'])
+@login_required
+def adicionar_materia(id):
+    """Adiciona uma matéria ao professor via API."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        return jsonify({'error': 'Sem permissão'}), 403
+    
+    professor = Professor.query.get_or_404(id)
+    materia_id = request.json.get('materia_id')
+    
+    materia = Materia.query.get_or_404(materia_id)
+    
+    if materia in professor.materias:
+        return jsonify({'error': 'Professor já leciona esta matéria'}), 400
+    
+    professor.materias.append(materia)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Matéria adicionada'})
+
+
+@professores_bp.route('/<int:id>/materias/<int:materia_id>', methods=['DELETE'])
+@login_required
+def remover_materia(id, materia_id):
+    """Remove uma matéria do professor via API."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        return jsonify({'error': 'Sem permissão'}), 403
+    
+    professor = Professor.query.get_or_404(id)
+    materia = Materia.query.get_or_404(materia_id)
+    
+    if materia not in professor.materias:
+        return jsonify({'error': 'Professor não leciona esta matéria'}), 400
+    
+    professor.materias.remove(materia)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Matéria removida'})

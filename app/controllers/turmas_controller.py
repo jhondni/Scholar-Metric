@@ -10,6 +10,7 @@ from app import db
 from app.models.turma import Turma
 from app.models.aluno import Aluno
 from app.models.professor import Professor
+from app.models.materia import Materia, turma_materias
 
 turmas_bp = Blueprint('turmas', __name__, url_prefix='/turmas')
 
@@ -196,3 +197,169 @@ def remover_aluno(id, aluno_id):
     db.session.commit()
     
     return jsonify({'success': True, 'message': 'Aluno removido'})
+
+
+# ==================== Matérias da Turma ====================
+
+@turmas_bp.route('/<int:id>/materias', methods=['GET', 'POST'])
+@login_required
+def materias(id):
+    """Gerenciar matérias da turma com quantidade de aulas por período."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        flash('Sem permissão para gerenciar matérias de turmas', 'error')
+        return redirect(url_for('turmas.index'))
+    
+    turma = Turma.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        materia_ids = request.form.getlist('materias')
+        aulas_por_periodo = {}
+        
+        for mid in materia_ids:
+            aulas = request.form.get(f'aulas_{mid}', 2, type=int)
+            aulas_por_periodo[int(mid)] = aulas
+        
+        # Remover todas as matérias atuais
+        db.session.execute(
+            turma_materias.delete().where(turma_materias.c.turma_id == turma.id)
+        )
+        
+        # Adicionar novas matérias com aulas_por_periodo
+        for mid in materia_ids:
+            mid_int = int(mid)
+            aulas = aulas_por_periodo.get(mid_int, 2)
+            db.session.execute(
+                turma_materias.insert().values(
+                    turma_id=turma.id,
+                    materia_id=mid_int,
+                    aulas_por_periodo=aulas
+                )
+            )
+        
+        db.session.commit()
+        flash('Matérias da turma atualizadas com sucesso', 'success')
+        return redirect(url_for('turmas.detalhe', id=turma.id))
+    
+    materias = Materia.query.filter_by(ativa=True).order_by(Materia.nome).all()
+    return render_template('turmas/materias.html', turma=turma, materias=materias)
+
+
+@turmas_bp.route('/<int:id>/materias/adicionar', methods=['POST'])
+@login_required
+def adicionar_materia(id):
+    """Adiciona uma matéria à turma via API."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        return jsonify({'error': 'Sem permissão'}), 403
+    
+    turma = Turma.query.get_or_404(id)
+    materia_id = request.json.get('materia_id')
+    aulas_por_periodo = request.json.get('aulas_por_periodo', 2)
+    
+    materia = Materia.query.get_or_404(materia_id)
+    
+    # Verificar se já existe
+    existing = db.session.query(turma_materias).filter_by(
+        turma_id=turma.id, materia_id=materia.id
+    ).first()
+    
+    if existing:
+        return jsonify({'error': 'Matéria já está na turma'}), 400
+    
+    db.session.execute(
+        turma_materias.insert().values(
+            turma_id=turma.id,
+            materia_id=materia.id,
+            aulas_por_periodo=aulas_por_periodo
+        )
+    )
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Matéria adicionada'})
+
+
+@turmas_bp.route('/<int:id>/materias/<int:materia_id>', methods=['DELETE'])
+@login_required
+def remover_materia(id, materia_id):
+    """Remove uma matéria da turma via API."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        return jsonify({'error': 'Sem permissão'}), 403
+    
+    turma = Turma.query.get_or_404(id)
+    
+    db.session.execute(
+        turma_materias.delete().where(
+            db.and_(
+                turma_materias.c.turma_id == turma.id,
+                turma_materias.c.materia_id == materia_id
+            )
+        )
+    )
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Matéria removida'})
+
+
+# ==================== Geração de Calendário ====================
+
+@turmas_bp.route('/<int:id>/gerar-calendario', methods=['POST'])
+@login_required
+def gerar_calendario(id):
+    """Gera calendário automático para a turma."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        flash('Sem permissão para gerar calendário', 'error')
+        return redirect(url_for('turmas.index'))
+    
+    turma = Turma.query.get_or_404(id)
+    
+    if not turma.materias:
+        flash('A turma não possui matérias cadastradas. Adicione matérias antes de gerar o calendário.', 'error')
+        return redirect(url_for('turmas.detalhe', id=turma.id))
+    
+    # Verificar se há professores disponíveis para as matérias
+    materias_sem_professor = []
+    for materia in turma.materias:
+        if not materia.professores.filter_by(ativo=True).first():
+            materias_sem_professor.append(materia.nome)
+    
+    if materias_sem_professor:
+        flash(f'Não há professores disponíveis para: {", ".join(materias_sem_professor)}. Associe professores às matérias antes de gerar o calendário.', 'error')
+        return redirect(url_for('turmas.detalhe', id=turma.id))
+    
+    periodo = request.form.get('periodo', 'semestral')
+    
+    from app.services.gerador_calendario import gerar_calendario_avancado
+    
+    resultado = gerar_calendario_avancado(
+        turma_id=turma.id,
+        periodo=periodo
+    )
+    
+    if resultado['success']:
+        flash(f'Calendário gerado com sucesso! {resultado["total_aulas"]} aulas criadas.', 'success')
+    else:
+        flash(f'Erro ao gerar calendário: {resultado.get("error", "Erro desconhecido")}', 'error')
+    
+    return redirect(url_for('turmas.detalhe', id=turma.id))
+
+
+@turmas_bp.route('/gerar-calendario-todas', methods=['POST'])
+@login_required
+def gerar_calendario_todas():
+    """Gera calendário automático para todas as turmas ativas."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        flash('Sem permissão para gerar calendário', 'error')
+        return redirect(url_for('turmas.index'))
+    
+    periodo = request.form.get('periodo', 'semestral')
+    
+    from app.services.gerador_calendario import gerar_calendario_avancado
+    
+    resultado = gerar_calendario_avancado(periodo=periodo)
+    
+    if resultado['success']:
+        detalhes = '<br>'.join(resultado['detalhes'])
+        flash(f'Calendário gerado! Total: {resultado["total_aulas"]} aulas.<br>{detalhes}', 'success')
+    else:
+        flash(f'Erro ao gerar calendário: {resultado.get("error", "Erro desconhecido")}', 'error')
+    
+    return redirect(url_for('turmas.index'))

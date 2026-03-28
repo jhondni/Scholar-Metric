@@ -2,6 +2,122 @@
 
 ---
 
+## 🆕 Funcionalidades Avançadas - Gestão de Turmas e Calendário (Março/2026)
+
+### ✅ Gestão de Matérias por Professor
+- **Página**: Detalhe do professor mostra matérias que pode lecionar
+- **Gerenciamento**: Botão "Gerenciar Matérias" leva a página dedicada
+- **API**: Rotas para adicionar/remover matérias via AJAX
+- **Rotas novas**:
+  - `GET /professores/<id>/materias` - Página de gerenciamento
+  - `POST /professores/<id>/materias` - Salvar matérias (form)
+  - `POST /professores/<id>/materias/adicionar` - API adicionar matéria
+  - `DELETE /professores/<id>/materias/<materia_id>` - API remover matéria
+
+### ✅ Gestão de Matérias por Turma com Aulas por Período
+- **Página dedicada**: `/turmas/<id>/materias`
+- **Funcionalidade**: Selecionar matérias e definir aulas/semana
+- **Exemplo**: Matemática → 4 aulas/semana, Português → 3 aulas/semana
+- **Validação**: Mostra quantos professores estão disponíveis para cada matéria
+- **Rotas novas**:
+  - `GET /turmas/<id>/materias` - Página de gerenciamento
+  - `POST /turmas/<id>/materias` - Salvar matérias (form)
+  - `POST /turmas/<id>/materias/adicionar` - API adicionar matéria
+  - `DELETE /turmas/<id>/materias/<materia_id>` - API remover matéria
+
+### ✅ Geração Automática de Calendário
+- **Serviço**: `app/services/gerador_calendario.py` - `GeradorCalendarioAcademico`
+- **Algoritmo**: Heurístico guloso que distribui aulas considerando:
+  - Matérias da turma e aulas por período
+  - Professores disponíveis para cada matéria
+  - Conflito de horário (mesma turma)
+  - Conflito de professor (mesmo professor em duas turmas)
+  - Conflito de alunos (alunos com aulas simultâneas)
+  - Feriados e dias não letivos
+  - Horários de turno (manhã/tarde/noite)
+- **Períodos suportados**: Semestral (6 meses) ou Anual (12 meses)
+- **Rotas novas**:
+  - `POST /turmas/<id>/gerar-calendario` - Gerar para uma turma
+  - `POST /turmas/gerar-calendario-todas` - Gerar para todas as turmas
+- **Interface**: Botão "Gerar Calendário Semanal" na página de detalhe da turma
+- **Restrições respeitadas**:
+  - ❌ Não permite conflito de horários do professor
+  - ❌ Não permite aulas simultâneas para alunos da mesma turma
+  - ❌ Pula feriados e dias não letivos
+  - ❌ Pula fins de semana
+
+### ✅ Integração com Sistema
+- Calendário gerado aparece automaticamente no:
+  - Calendário geral (`/calendario`)
+  - Página de aulas (`/aulas`)
+- Aulas são editáveis individualmente após geração
+- Link de "Matérias" adicionado ao sidebar
+
+### ✅ Controle de Acesso
+- Apenas **Diretora** e **Coordenação** podem:
+  - Editar matérias de turmas
+  - Editar matérias de professores
+  - Gerar calendário automático
+- Professores podem apenas visualizar
+
+### 📊 Modelagem de Dados Atualizada
+
+#### Tabela: turma_materias (N:N com campo extra)
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| turma_id | INTEGER (FK) | Referência à turma |
+| materia_id | INTEGER (FK) | Referência à matéria |
+| aulas_por_periodo | INTEGER | Quantidade de aulas por semana |
+
+#### Tabela: professor_materias (N:N)
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| professor_id | INTEGER (FK) | Referência ao professor |
+| materia_id | INTEGER (FK) | Referência à matéria |
+
+#### Novos Relacionamentos
+- **Professor ↔ Matéria**: N:N via `professor_materias`
+  - Professor pode lecionar múltiplas matérias
+  - Matéria pode ser lecionada por múltiplos professores
+- **Turma ↔ Matéria**: N:N via `turma_materias` (com `aulas_por_periodo`)
+  - Turma tem múltiplas matérias
+  - Matéria pode estar em múltiplas turmas
+  - Cada associação define quantas aulas/semana
+
+---
+
+## 🆕 Seed de Dados Expandido (Março/2026)
+
+### Dados Criados
+- **Professores**: 11 (incluindo joao@prof.com)
+- **Alunos**: 120+
+- **Turmas**: 6 (1º ao 3º Ano, Manhã e Tarde)
+- **Matérias**: 7 (Matemática, Português, Ciências, etc.)
+- **Aulas**: 54 agendadas
+- **Feriados**: 10 nacionais brasileiros
+- **Associações professor↔matérias**: Cada professor associado à sua especialidade
+- **Associações turma↔matérias**: Todas as turmas com todas as matérias configuradas
+
+### Script de Seed
+- **Arquivo**: `seed.py`
+- **Executar**: `python3 seed.py`
+- **Funcionalidades**:
+  - Criação automática de turmas equilibradas
+  - Distribuição de alunos nas turmas
+  - Geração de aulas inteligente
+  - Associação de professores às matérias
+  - Associação de matérias às turmas com aulas/semana
+
+### Contas para Teste
+| Email | Senha | Tipo |
+|-------|-------|------|
+| joao@escola.com | 1234 | Diretora |
+| coordenacao@escola.com | 1234 | Coordenação |
+| joao@prof.com | 1234 | Professor |
+| maria@escola.com | 1234 | Professor |
+
+---
+
 ## 🆕 Atualizações Recentes (Março/2026)
 
 ### ✅ Correções de Erros
@@ -151,18 +267,24 @@ Requisição HTTP → Flask Router → Controller → Model (DB) → Template (V
 - **Responsabilidade**: Representar docentes
 - **Atributos**: registro, especialidade, formação
 - **Métodos**: total_aulas(), turmas_ativas()
-- **Relacionamento**: 1:1 com Usuario, N:N com Turma
+- **Relacionamento**: 1:1 com Usuario, N:N com Turma, N:N com Matéria
 
 #### Turma (turma.py)
 - **Responsabilidade**: Agrupar alunos e aulas
 - **Atributos**: nome, codigo, serie, turno, capacidade
-- **Métodos**: total_alunos(), media_turma(), percentual_frequencia_media()
+- **Métodos**: total_alunos(), media_turma(), percentual_frequencia_media(), get_aulas_por_periodo(), set_aulas_por_periodo()
+- **Relacionamento**: N:N com Aluno, N:N com Professor, N:N com Matéria (com aulas_por_periodo)
 
 #### Aula (aula.py)
 - **Responsabilidade**: Representar aulas agendadas
 - **Atributos**: materia, data, horário, recorrência
 - **Métodos**: gerar_datas_recorrencia(), verificar_conflito()
 - **Padrão**: Self-referencing (aula_pai → aulas_filhas)
+
+#### Matéria (materia.py)
+- **Responsabilidade**: Representar disciplinas lecionadas
+- **Atributos**: nome, codigo, descricao, carga_horaria, ativa
+- **Relacionamento**: N:N com Professor (professor_materias), N:N com Turma (turma_materias com aulas_por_periodo)
 
 ### Boas Práticas Aplicadas
 - **Single Responsibility**: Cada classe tem uma responsabilidade bem definida
@@ -296,9 +418,21 @@ Requisição HTTP → Flask Router → Controller → Model (DB) → Template (V
 | data_fim | DATE | Data de fim |
 | tipo | VARCHAR(30) | Tipo |
 
+#### Tabela: materias
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | INTEGER (PK) | Identificador único |
+| nome | VARCHAR(100) | Nome da matéria (único) |
+| codigo | VARCHAR(20) | Código único |
+| descricao | TEXT | Descrição |
+| carga_horaria | INTEGER | Carga horária total |
+| ativa | BOOLEAN | Status |
+
 ### Tabelas de Associação (N:N)
 - **alunos_turmas**: alunos ↔ turmas
 - **professores_turmas**: professores ↔ turmas
+- **professor_materias**: professores ↔ matérias
+- **turma_materias**: turmas ↔ matérias (com aulas_por_periodo INTEGER default 2)
 
 ### Justificativa das Decisões
 - **PostgreSQL**: Robusto, suporta transações e índices avançados
@@ -382,6 +516,35 @@ Requisição HTTP → Flask Router → Controller → Model (DB) → Template (V
 - Integração com aulas, feriados e dias não letivos
 - API REST para eventos (`/calendario/api/eventos`)
 - Cores diferenciadas por tipo de evento
+
+### Geração Automática de Calendário
+- **Serviço**: `app/services/gerador_calendario.py`
+- **Classe**: `GeradorCalendarioAcademico`
+- **Algoritmo**: Heurístico guloso
+
+#### Entradas:
+- Matérias da turma com aulas por período (semana)
+- Professores disponíveis para cada matéria
+- Horários do turno da turma
+- Feriados e dias não letivos
+
+#### Restrições respeitadas:
+- Sem conflito de horário do professor (mesmo professor em duas turmas simultâneas)
+- Sem conflito de alunos (alunos não podem ter aulas simultâneas)
+- Respeito a feriados e dias não letivos
+- Pulados fins de semana
+
+#### Períodos suportados:
+- **Semestral**: Gera aulas para 6 meses a partir de hoje
+- **Anual**: Gera aulas para 12 meses a partir de hoje
+
+#### Lógica de distribuição:
+1. Para cada dia letivo do período
+2. Para cada matéria da turma
+3. Tenta alocar em cada horário disponível do turno
+4. Encontra professor disponível sem conflito
+5. Cria a aula se não houver conflito
+6. Avança para próxima matéria/dia
 
 ### Integração
 - Aulas aparecem automaticamente no calendário
@@ -527,93 +690,47 @@ Tipo: diretora (acesso total)
 
 ## 📋 Changelog
 
-### Versão 1.3.0 (27/03/2026)
+### Versão 2.0.0 (28/03/2026)
 
-#### ✅ Melhorias de Animação - Páginas de Autenticação
-- **Animação de background redesenhada**:
-  - Movimento flutuante bidimensional (X e Y)
-  - 3 variações de animação para movimento mais natural
-  - Símbolos incluem: números, símbolos matemáticos, letras (x, y, z, a, b, c)
-  - Distribuição aleatória na tela
-  - Baixa opacidade (4% a 12%) para não atrapalhar leitura
-  
-- **Símbolos implementados**:
-  - Números: 0-9
-  - Operadores: +, −, ×, ÷, =, <, >, ≠, ≈, ±
-  - Matemáticos: ∑, √, π, ∞, ∫, ∂, ∇, ∆, ∏, ∪, ∩
-  - Grego: α, β, γ, δ, θ, λ, μ, σ, φ, ω, Δ, Σ, Ω
-  - Variáveis: x, y, z, a, b, c, n, m, i, f, e
-  - Conjuntos: ∈, ∉, ⊂, ⊃, ⊆, ⊇, ∅, ∀, ∃
+#### ✅ Gestão Avançada de Turmas
+- **Matérias por Turma**: Definir matérias e aulas/semana para cada turma
+- **Página dedicada**: `/turmas/<id>/materias` com interface completa
+- **Validação**: Mostra professores disponíveis por matéria
+- **Tabela de associação**: `turma_materias` com campo `aulas_por_periodo`
 
-- **Otimizações de performance**:
-  - Uso de `will-change` e `transform` para GPU acceleration
-  - Pausa de animação quando aba não está visível
-  - Suporte a `prefers-reduced-motion` (movimento reduzido)
-  - Animações pausadas quando usuário prefere menos movimento
+#### ✅ Professores e Matérias
+- **Matérias por Professor**: Cada professor tem lista de matérias que pode lecionar
+- **Exibição**: Página de detalhe mostra matérias como badges
+- **Gerenciamento**: Página dedicada `/professores/<id>/materias` com checkboxes
+- **API**: Rotas para adicionar/remover matérias via AJAX
+- **Tabela de associação**: `professor_materias`
 
-- **Responsividade**:
-  - Funciona em desktop, tablet e mobile
-  - Ajuste automático de densidade de símbolos
+#### ✅ Geração Automática de Calendário
+- **Serviço**: `GeradorCalendarioAcademico` em `app/services/gerador_calendario.py`
+- **Algoritmo**: Heurístico guloso para distribuição de aulas
+- **Restrições**: Sem conflitos de professor, turma ou alunos
+- **Períodos**: Semestral ou Anual
+- **Interface**: Botão "Gerar Calendário Semanal" na página de turma
+- **Geração em lote**: Botão "Gerar Calendário Geral" na lista de turmas
 
-- **Tema escuro**:
-  - Opacidade ajustada para tema escuro
-  - Cores adaptadas automaticamente
+#### ✅ Integração
+- Link "Matérias" adicionado ao sidebar
+- Coluna "Matérias" na tabela de turmas
+- Ícone de livro para acessar matérias da turma na tabela
 
-- **Arquivos modificados**:
-  - `app/static/js/auth.js` - JavaScript completamente reescrito
-  - `app/static/css/auth.css` - Animações CSS atualizadas
+#### ✅ Controle de Acesso
+- Edição de matérias: apenas Diretora e Coordenação
+- Geração de calendário: apenas Diretora e Coordenação
 
-### Versão 1.2.0 (27/03/2026)
+#### ✅ Seed Atualizado
+- Associações automáticas de professores às suas especialidades
+- Todas as turmas com todas as matérias configuradas
+- Aulas por semana: Matemática (4), Português (4), outras (2)
 
-#### ✅ Correções de Layout - Páginas de Autenticação
-- **Problema corrigido**: Páginas de autenticação ocupando apenas metade da tela
-- **Solução aplicada**:
-  - Adicionada classe `auth-mode` no `<body>` para páginas não autenticadas
-  - CSS do body resetado em modo auth: `display: block` (substituindo `flex`)
-  - Dimensões do `.auth-page` ajustadas: `width: 100%` e `height: 100vh`
-  - Compatibilidade garantida com todos os navegadores modernos
-- **Páginas corrigidas**:
-  - Login (`/auth/login`)
-  - Registro (`/auth/registro`)
-  - Recuperação de senha (`/auth/recuperar-senha`)
-- **Responsividade mantida**: Layout funciona corretamente em desktop, tablet e mobile
-
-### Versão 1.1.0 (27/03/2026)
-
-#### ✅ Correções
-- **Conexão com banco de dados**: Implementado fallback automático para SQLite quando PostgreSQL não está disponível
-- **Mensagens de erro**: Adicionadas mensagens amigáveis para erros de conexão
-- **Inicialização**: Verificação automática de conexão antes de iniciar a aplicação
-
-#### ✅ Novas Funcionalidades
-- **Script de seed** (`seed.py`): Criação automática de dados de teste
-  - Usuário de teste (joao@escola.com / 1234)
-  - Professores de exemplo
-  - Turmas de exemplo
-  - Alunos de exemplo
-  - Aulas de exemplo
-  - Feriados nacionais
-
-#### ✅ Melhorias de UI/UX - Páginas de Autenticação
-- **Layout consistente**: Todas as páginas de auth agora usam o mesmo layout split screen
-- **CSS compartilhado** (`auth.css`): Estilos reutilizáveis para login, registro e recuperação
-- **JavaScript compartilhado** (`auth.js`): Animações e funcionalidades comuns
-- **Responsividade**: Suporte completo a desktop, tablet e mobile
-- **Tema escuro**: Suporte a tema escuro em todas as páginas de auth
-- **Melhorias visuais**:
-  - Animação de entrada suave
-  - Toggle de visibilidade de senha
-  - Alertas estilizados
-  - Botões com efeitos de hover
-  - Checkbox customizado
-  - Validação visual de campos
-  - Links de navegação entre páginas
-
-#### ✅ Melhorias Técnicas
-- **Configuração**: Função `check_database_connection()` para verificar conexão
-- **Configuração**: Função `get_database_uri()` com fallback automático
-- **Factory**: Criação automática de tabelas na inicialização
-- **run.py**: Banner de inicialização e tratamento de erros
+#### ✅ Documentação
+- PROJECT_CONTEXT.md atualizado com novas funcionalidades
+- Modelagem de dados atualizada
+- Sistema de calendário documentado
 
 ### Versão 1.4.0 (27/03/2026)
 

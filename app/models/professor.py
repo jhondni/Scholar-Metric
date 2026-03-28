@@ -37,6 +37,8 @@ class Professor(db.Model):
     # Relacionamentos
     turmas = db.relationship('Turma', secondary='professores_turmas', backref=db.backref('professores', lazy='dynamic'))
     aulas = db.relationship('Aula', backref='professor', lazy='dynamic')
+    materias = db.relationship('Materia', secondary='professor_materias',
+                               backref=db.backref('professores', lazy='dynamic'))
     
     def total_aulas(self, periodo=None):
         """

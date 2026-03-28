@@ -12,6 +12,14 @@
             <input type="text" class="form-control" placeholder="Buscar turma..." id="searchInput" value="{{ busca }}">
         </div>
         {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+        <form method="POST" action="{{ url_for('turmas.gerar_calendario_todas') }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="periodo" value="semestral">
+            <button type="submit" class="btn btn-outline" onclick="return confirm('Gerar calendário para todas as turmas ativas?')">
+                <i class="fas fa-calendar-plus"></i>
+                Gerar Calendário Geral
+            </button>
+        </form>
         <a href="{{ url_for('turmas.novo') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i>
             Nova Turma
@@ -32,6 +40,7 @@
                         <th>Série</th>
                         <th>Turno</th>
                         <th>Alunos</th>
+                        <th>Matérias</th>
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
@@ -44,6 +53,7 @@
                         <td>{{ turma.serie }}</td>
                         <td>{{ turma.turno|capitalize }}</td>
                         <td>{{ turma.total_alunos() }}/{{ turma.capacidade_maxima }}</td>
+                        <td>{{ turma.materias|length }}</td>
                         <td>
                             {% if turma.ativa %}
                             <span class="badge badge-success">Ativa</span>
@@ -58,6 +68,9 @@
                             {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
                             <a href="{{ url_for('turmas.editar', id=turma.id) }}" class="btn btn-icon btn-sm btn-outline" title="Editar">
                                 <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('turmas.materias', id=turma.id) }}" class="btn btn-icon btn-sm btn-outline" title="Matérias">
+                                <i class="fas fa-book"></i>
                             </a>
                             {% endif %}
                         </td>

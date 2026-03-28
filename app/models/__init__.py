@@ -10,6 +10,7 @@ from app.models.nota import Nota
 from app.models.arquivo import Arquivo
 from app.models.feriado import Feriado
 from app.models.dia_nao_letivo import DiaNaoLetivo
+from app.models.materia import Materia
 
 __all__ = [
     'Usuario',
@@ -21,5 +22,6 @@ __all__ = [
     'Nota',
     'Arquivo',
     'Feriado',
-    'DiaNaoLetivo'
+    'DiaNaoLetivo',
+    'Materia'
 ]

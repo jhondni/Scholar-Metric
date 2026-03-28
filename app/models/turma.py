@@ -38,6 +38,43 @@ class Turma(db.Model):
     
     # Relacionamentos
     aulas = db.relationship('Aula', backref='turma', lazy='dynamic')
+    materias = db.relationship('Materia', secondary='turma_materias',
+                               backref=db.backref('turmas', lazy='dynamic'))
+    
+    def get_aulas_por_periodo(self, materia_id):
+        """
+        Retorna a quantidade de aulas por período para uma matéria.
+        
+        Args:
+            materia_id: ID da matéria
+            
+        Returns:
+            int: Número de aulas por período
+        """
+        from app.models.materia import turma_materias
+        result = db.session.query(turma_materias.c.aulas_por_periodo).filter(
+            turma_materias.c.turma_id == self.id,
+            turma_materias.c.materia_id == materia_id
+        ).first()
+        return result[0] if result else 0
+    
+    def set_aulas_por_periodo(self, materia_id, aulas):
+        """
+        Define a quantidade de aulas por período para uma matéria.
+        
+        Args:
+            materia_id: ID da matéria
+            aulas: Número de aulas por período
+        """
+        from app.models.materia import turma_materias
+        db.session.execute(
+            turma_materias.update().where(
+                db.and_(
+                    turma_materias.c.turma_id == self.id,
+                    turma_materias.c.materia_id == materia_id
+                )
+            ).values(aulas_por_periodo=aulas)
+        )
     
     def total_alunos(self):
         """Retorna o número de alunos na turma."""

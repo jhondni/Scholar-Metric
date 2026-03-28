@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="d-flex justify-between align-center mb-3">
-    <a href="{{ url_for("professores.detalhe", id=professor.id) }}" class="btn btn-sm btn-outline">
+    <a href="{{ url_for('professores.detalhe', id=professor.id) }}" class="btn btn-sm btn-outline">
         <i class="fas fa-arrow-left"></i> Voltar
     </a>
 </div>
@@ -15,7 +15,7 @@
     </div>
     <div class="card-body">
         <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <p class="mb-3">Selecione as matérias que este professor pode lecionar:</p>
             
             {% if materias %}

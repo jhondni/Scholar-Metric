@@ -69,6 +69,12 @@
                         <span>Aulas</span>
                     </a>
                 </li>
+                <li class="nav-item {% if 'materias' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('materias.index') }}">
+                        <i class="fas fa-book"></i>
+                        <span>Matérias</span>
+                    </a>
+                </li>
                 <li class="nav-item {% if 'calendario' in request.endpoint %}active{% endif %}">
                     <a href="{{ url_for('calendario.index') }}">
                         <i class="fas fa-calendar-alt"></i>
