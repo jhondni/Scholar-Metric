@@ -7,6 +7,7 @@
     <div class="card-header"><h3 class="card-title">{{ titulo }}</h3></div>
     <div class="card-body">
         <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             {{ form.hidden_tag() }}
             <div class="grid grid-2">
                 <div class="form-group"><label class="form-label">{{ form.registro.label.text }}</label>{{ form.registro(class="form-control", readonly=professor is defined) }}{% for e in form.registro.errors %}<span class="form-error">{{ e }}</span>{% endfor %}</div>

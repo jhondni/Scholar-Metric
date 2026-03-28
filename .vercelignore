@@ -1,0 +1,74 @@
+# .vercelignore - Arquivos e pastas excluídos do deploy na Vercel
+# Estes arquivos não serão enviados para a Vercel
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Documentação
+*.md
+LICENSE
+
+# Variáveis de ambiente (NÃO enviar para Vercel)
+.env
+.env.local
+.env.*.local
+
+# Flask
+.flaskenv
+
+# Banco de dados local
+instance/
+*.db
+
+# Migrações (opcional - descomentar se usar Flask-Migrate externamente)
+# migrations/
+
+# Seeds e scripts de setup
+seed.py
+database/
+
+# Arquivos de configuração de desenvolvimento
+pyproject.toml
+setup.py
+setup.cfg
+
+# Testes
+tests/
+test_*
+*_test.py
+pytest.ini
+.tox/
+
+# Uploads
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (se houver)
+node_modules/
+package-lock.json
+yarn.lock

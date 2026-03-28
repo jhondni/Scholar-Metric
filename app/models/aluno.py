@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from app import db
+from app.models.nota import Nota
 
 
 class Aluno(db.Model):

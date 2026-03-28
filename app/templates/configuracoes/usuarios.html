@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Usuários - Analitcs School{% endblock %}
+{% block page_title %}Gestão de Usuários{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Usuários do Sistema</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Tipo</th>
+                        <th>Status</th>
+                        <th>Último Acesso</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario.nome }}</td>
+                        <td>{{ usuario.email }}</td>
+                        <td>
+                            <select class="form-select form-select-sm" style="width: auto;" 
+                                    onchange="promoverUsuario({{ usuario.id }}, this.value)"
+                                    {% if usuario.id == current_user.id or current_user.tipo != "diretora" %}disabled{% endif %}>
+                                <option value="diretora" {% if usuario.tipo == "diretora" %}selected{% endif %}>Diretora</option>
+                                <option value="coordenacao" {% if usuario.tipo == "coordenacao" %}selected{% endif %}>Coordenação</option>
+                                <option value="professor" {% if usuario.tipo == "professor" %}selected{% endif %}>Professor</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span class="badge badge-{% if usuario.ativo %}success{% else %}danger{% endif %}">
+                                {% if usuario.ativo %}Ativo{% else %}Inativo{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if usuario.ultimo_acesso %}
+                            {{ usuario.ultimo_acesso.strftime("%d/%m/%Y %H:%M") }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.id != current_user.id and current_user.tipo == "diretora" %}
+                            <button class="btn btn-icon btn-sm btn-outline" 
+                                    onclick="toggleUsuario({{ usuario.id }}, {% if usuario.ativo %}false{% else %}true{% endif %})">
+                                <i class="fas fa-{% if usuario.ativo %}ban{% else %}check{% endif %}"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+async function promoverUsuario(userId, novoTipo) {
+    if (!confirm("Tem certeza que deseja alterar o tipo deste usuário?")) {
+        location.reload();
+        return;
+    }
+    
+    const response = await fetch(`/configuracoes/usuarios/${userId}/promover`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({tipo: novoTipo})
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+        alert(data.message);
+    } else {
+        alert(data.error);
+        location.reload();
+    }
+}
+
+async function toggleUsuario(userId, ativar) {
+    const action = ativar ? "ativar" : "desativar";
+    if (!confirm(`Tem certeza que deseja ${action} este usuário?`)) {
+        return;
+    }
+    
+    const response = await fetch(`/configuracoes/usuarios/${userId}/ativar`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ativo: ativar})
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+        location.reload();
+    } else {
+        alert(data.error);
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

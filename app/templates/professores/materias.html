@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Gerenciar Matérias - Analitcs School{% endblock %}
+{% block page_title %}Matérias que {{ professor.usuario.nome }} pode Lecionar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <a href="{{ url_for('professores.detalhe', id=professor.id) }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Matérias do Professor</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p class="mb-3">Selecione as matérias que este professor pode lecionar:</p>
+            
+            {% if materias %}
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Selecionar</th>
+                            <th>Código</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for materia in materias %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="materias" value="{{ materia.id }}" 
+                                {% if materia in professor.materias %}checked{% endif %}>
+                            </td>
+                            <td>{{ materia.codigo }}</td>
+                            <td>{{ materia.nome }}</td>
+                            <td>{{ materia.descricao or "-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar Matérias
+                </button>
+            </div>
+            {% else %}
+            <p class="text-muted">Nenhuma matéria cadastrada no sistema.</p>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

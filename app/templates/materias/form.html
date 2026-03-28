@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Analitcs School{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">{{ titulo }}</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label class="form-label">Nome</label>
+                {{ form.nome(class="form-control") }}
+                {% if form.nome.errors %}
+                <div class="text-danger">{{ form.nome.errors[0] }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Código</label>
+                {{ form.codigo(class="form-control") }}
+                {% if form.codigo.errors %}
+                <div class="text-danger">{{ form.codigo.errors[0] }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                {{ form.descricao(class="form-control") }}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Carga Horária</label>
+                {{ form.carga_horaria(class="form-control") }}
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+                <a href="{{ url_for("materias.index") }}" class="btn btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

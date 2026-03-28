@@ -53,6 +53,97 @@
     </div>
 </div>
 
+<!-- Seção de Matérias -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Matérias da Turma</h3>
+        <div class="d-flex gap-2">
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <a href="{{ url_for('turmas.materias', id=turma.id) }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit"></i> Gerenciar Matérias
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        {% if turma.materias %}
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Matéria</th>
+                        <th>Código</th>
+                        <th>Aulas/Semana</th>
+                        <th>Professores</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for materia in turma.materias %}
+                    <tr>
+                        <td><strong>{{ materia.nome }}</strong></td>
+                        <td>{{ materia.codigo }}</td>
+                        <td>{{ turma.get_aulas_por_periodo(materia.id) }}</td>
+                        <td>
+                            {% set profs = materia.professores.filter_by(ativo=True).all() %}
+                            {% if profs %}
+                                {% for prof in profs %}
+                                <a href="{{ url_for('professores.detalhe', id=prof.id) }}" class="badge badge-info" style="text-decoration: none;">
+                                    {{ prof.usuario.nome }}
+                                </a>
+                                {% endfor %}
+                            {% else %}
+                            <span class="badge badge-danger">Sem professor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-book empty-state-icon"></i>
+            <h4 class="empty-state-title">Nenhuma matéria cadastrada</h4>
+            <p class="empty-state-text">Adicione matérias a esta turma para poder gerar o calendário.</p>
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <a href="{{ url_for('turmas.materias', id=turma.id) }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Adicionar Matérias
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Botão de Gerar Calendário -->
+{% if current_user.tem_permissao(['diretora', 'coordenacao']) and turma.materias %}
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Geração Automática de Calendário</h3>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">Gere automaticamente a grade de horários para esta turma considerando as matérias, professores disponíveis e restrições de calendário.</p>
+        <form method="POST" action="{{ url_for('turmas.gerar_calendario', id=turma.id) }}" id="formGerarCalendario">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="d-flex gap-2 align-center">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="margin-bottom: 0.25rem;">Período:</label>
+                    <select name="periodo" class="form-control" style="width: 200px;">
+                        <option value="semestral">Semestral (6 meses)</option>
+                        <option value="anual">Anual (12 meses)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">
+                    <i class="fas fa-calendar-plus"></i>
+                    Gerar Calendário Semanal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Seção de Alunos -->
 <div class="card">
     <div class="card-header">
         <h3 class="card-title">Alunos da Turma</h3>

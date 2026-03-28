@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ materia.nome }} - Analitcs School{% endblock %}
+{% block page_title %}Matéria: {{ materia.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <div>
+        <span class="badge badge-primary">{{ materia.codigo }}</span>
+        <span class="badge badge-{% if materia.ativa %}success{% else %}danger{% endif %}">
+            {% if materia.ativa %}Ativa{% else %}Inativa{% endif %}
+        </span>
+    </div>
+    {% if current_user.tem_permissao(["diretora", "coordenacao"]) %}
+    <a href="{{ url_for("materias.editar", id=materia.id) }}" class="btn btn-outline">
+        <i class="fas fa-edit"></i> Editar
+    </a>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Informações</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid grid-2">
+            <p><strong>Código:</strong> {{ materia.codigo }}</p>
+            <p><strong>Nome:</strong> {{ materia.nome }}</p>
+            <p><strong>Carga Horária:</strong> {{ materia.carga_horaria or "-" }}h</p>
+            <p><strong>Descrição:</strong> {{ materia.descricao or "-" }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Professores que Lecionam</h3>
+    </div>
+    <div class="card-body">
+        {% if materia.professores %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Nome</th><th>Registro</th><th>Especialidade</th></tr></thead>
+                <tbody>
+                    {% for professor in materia.professores %}
+                    <tr>
+                        <td>{{ professor.usuario.nome }}</td>
+                        <td>{{ professor.registro }}</td>
+                        <td>{{ professor.especialidade or "-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Nenhum professor associado a esta matéria.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Turmas que имеют Esta Matéria</h3>
+    </div>
+    <div class="card-body">
+        {% if materia.turmas %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Código</th><th>Nome</th><th>Série</th></tr></thead>
+                <tbody>
+                    {% for turma in materia.turmas %}
+                    <tr>
+                        <td>{{ turma.codigo }}</td>
+                        <td>{{ turma.nome }}</td>
+                        <td>{{ turma.serie }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Nenhuma turma associée a esta matéria.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

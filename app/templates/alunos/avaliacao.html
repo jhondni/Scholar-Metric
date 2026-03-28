@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Avaliação - {{ aluno.nome }} - Analitcs School{% endblock %}
+{% block page_title %}Avaliação de Progressão{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <a href="{{ url_for("alunos.detalhe", id=aluno.id) }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Aluno: {{ aluno.nome }}</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid grid-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="fas fa-id-card"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ aluno.matricula }}</div>
+                    <div class="stat-label">Matrícula</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ aluno.ano_letivo }}</div>
+                    <div class="stat-label">Ano Letivo</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon info">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ aluno.turmas|length }}</div>
+                    <div class="stat-label">Turmas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Resultados por Turma</h3>
+    </div>
+    <div class="card-body">
+        {% if resultados %}
+        {% for resultado in resultados %}
+        <div class="mb-4">
+            <h4>{{ resultado.turma.nome }} ({{ resultado.turma.codigo }})</h4>
+            <div class="grid grid-2 mb-3">
+                <div class="stat-card">
+                    <div class="stat-icon {% if resultado.aprovacao.status == "aprovado" %}success{% else %}danger{% endif %}">
+                        <i class="fas fa-{% if resultado.aprovacao.status == "aprovado" %}check{% else %}times{% endif %}"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ resultado.aprovacao.status|upper }}</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ "%.1f"|format(resultado.aprovacao.media) }}</div>
+                        <div class="stat-label">Média (mín: {{ resultado.aprovacao.nota_minima }})</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ "%.1f"|format(resultado.aprovacao.frequencia) }}%</div>
+                        <div class="stat-label">Frequência (mín: {{ resultado.aprovacao.frequencia_minima }}%)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-{% if resultado.aprovacao.status == "aprovado" %}success{% else %}danger{% endif %}">
+                <strong>Justificativa:</strong> {{ resultado.aprovacao.justificativa }}
+            </div>
+            
+            {% if resultado.sugestao %}
+            <div class="alert alert-info">
+                <strong>Próxima Turma Sugerida:</strong><br>
+                {{ resultado.sugestao.turma.nome }} ({{ resultado.sugestao.turma.codigo }})<br>
+                <small>{{ resultado.sugestao.justificativa }}</small>
+            </div>
+            {% endif %}
+        </div>
+        {% if not loop.last %}<hr>{% endif %}
+        {% endfor %}
+        {% else %}
+        <p class="text-muted">Aluno não está matriculado em nenhuma turma.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

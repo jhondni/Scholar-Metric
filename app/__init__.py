@@ -6,14 +6,16 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect
 
-from config import config
+from config import config, is_serverless
 
 # Instâncias das extensões
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
 cors = CORS()
+csrf = CSRFProtect()
 
 
 def create_app(config_name='default'):
@@ -36,6 +38,7 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     migrate.init_app(app, db)
     cors.init_app(app)
+    csrf.init_app(app)
     
     # Configurar login
     login_manager.login_view = 'auth.login'
@@ -52,6 +55,7 @@ def create_app(config_name='default'):
     from app.controllers.calendario_controller import calendario_bp
     from app.controllers.configuracoes_controller import configuracoes_bp
     from app.controllers.analise_controller import analise_bp
+    from app.controllers.materias_controller import materias_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -62,20 +66,28 @@ def create_app(config_name='default'):
     app.register_blueprint(calendario_bp)
     app.register_blueprint(configuracoes_bp)
     app.register_blueprint(analise_bp)
+    app.register_blueprint(materias_bp)
     
     # Registrar handlers de erro
     register_error_handlers(app)
     
-    # Criar pasta de uploads
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Criar pasta de uploads (apenas se não for serverless)
+    if not is_serverless():
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Criar tabelas do banco de dados automaticamente
+    # Criar tabelas do banco de dados
+    # Em serverless, isso pode falhar se o DB não estiver acessível
+    # por isso tratamos o erro de forma resiliente
     with app.app_context():
         try:
             db.create_all()
-            print("[OK] Tabelas do banco de dados criadas/verificadas")
+            if not is_serverless():
+                print("[OK] Tabelas do banco de dados criadas/verificadas")
         except Exception as e:
-            print(f"[ERRO] Falha ao criar tabelas: {e}")
+            if not is_serverless():
+                print(f"[ERRO] Falha ao criar tabelas: {e}")
+            # Em serverless, não falhar se não conseguir criar tabelas
+            # O banco deve ser migrado previamente via Flask-Migrate
     
     return app
 
