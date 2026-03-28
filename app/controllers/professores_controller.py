@@ -1,17 +1,20 @@
-# app/controllers/professores_controller.py - Controller de Professores
+# app/controllers/professores_controller.py - Controller de Professores (Supabase)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, TextAreaField
 from wtforms.validators import DataRequired, Length, Optional
+from datetime import datetime, time as time_class
 
-from app import db
-from app.models.professor import Professor
-from app.models.usuario import Usuario
-from app.models.materia import Materia
+from app.repositories import ProfessorRepository, MateriaRepository, UsuarioRepository
 
 professores_bp = Blueprint('professores', __name__, url_prefix='/professores')
+
+# Instâncias dos repositórios
+professor_repo = ProfessorRepository()
+materia_repo = MateriaRepository()
+usuario_repo = UsuarioRepository()
 
 
 # ==================== Formulários ====================
@@ -33,6 +36,43 @@ class ProfessorForm(FlaskForm):
     ])
 
 
+# ==================== Funções Auxiliares ====================
+
+def _dict_to_professor_obj(data):
+    """Converte dicionário do Supabase em objeto compatível com templates."""
+    if not data:
+        return None
+    
+    # Buscar dados do usuário
+    usuario_data = usuario_repo.get_by_id(data.get('usuario_id'))
+    
+    class UsuarioObj:
+        def __init__(self, d):
+            self.id = d.get('id')
+            self.nome = d.get('nome', '')
+            self.email = d.get('email', '')
+            self.telefone = d.get('telefone', '')
+    
+    class ProfessorObj:
+        def __init__(self, d, usuario):
+            self.id = d.get('id')
+            self.usuario_id = d.get('usuario_id')
+            self.registro = d.get('registro', '')
+            self.especialidade = d.get('especialidade', '')
+            self.formacao = d.get('formacao', '')
+            self.cpf = d.get('cpf', '')
+            self.telefone = d.get('telefone', '')
+            self.endereco = d.get('endereco', '')
+            self.ativo = d.get('ativo', True)
+            self.criado_em = d.get('criado_em')
+            self.atualizado_em = d.get('atualizado_em')
+            self.usuario = usuario
+            self.materias = []  # Será preenchido quando necessário
+    
+    usuario = UsuarioObj(usuario_data) if usuario_data else UsuarioObj({})
+    return ProfessorObj(data, usuario)
+
+
 # ==================== Rotas ====================
 
 @professores_bp.route('/')
@@ -42,19 +82,45 @@ def index():
     page = request.args.get('page', 1, type=int)
     busca = request.args.get('busca', '')
     
-    query = Professor.query
+    professores_raw = professor_repo.get_all(order_by='registro')
     
     if busca:
-        query = query.join(Professor.usuario).filter(
-            Usuario.nome.ilike(f'%{busca}%') |
-            Professor.registro.ilike(f'%{busca}%')
-        )
+        professores_raw = [p for p in professores_raw if busca.lower() in p.get('registro', '').lower()]
+        # Também buscar por nome do usuário
+        for p in professor_repo.get_all():
+            usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+            if usuario and busca.lower() in usuario.get('nome', '').lower():
+                if p not in professores_raw:
+                    professores_raw.append(p)
     
-    professores = query.order_by(Professor.registro).paginate(
-        page=page, per_page=20, error_out=False
-    )
+    # Paginação manual
+    per_page = 20
+    total = len(professores_raw)
+    start = (page - 1) * per_page
+    end = start + per_page
+    professores_page = professores_raw[start:end]
     
-    return render_template('professores/index.html', professores=professores, busca=busca)
+    professores_obj = [_dict_to_professor_obj(p) for p in professores_page]
+    
+    class PaginateObj:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = (total + per_page - 1) // per_page
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        
+        def iter_pages(self):
+            for i in range(1, self.pages + 1):
+                yield i
+    
+    professores_paginados = PaginateObj(professores_obj, page, per_page, total)
+    
+    return render_template('professores/index.html', professores=professores_paginados, busca=busca)
 
 
 @professores_bp.route('/novo', methods=['GET', 'POST'])
@@ -68,23 +134,22 @@ def novo():
     form = ProfessorForm()
     
     if form.validate_on_submit():
-        if Professor.query.filter_by(registro=form.registro.data).first():
+        if professor_repo.get_by_registro(form.registro.data):
             flash('Registro já cadastrado', 'error')
             return render_template('professores/form.html', form=form, titulo='Novo Professor')
         
-        professor = Professor(
-            usuario_id=current_user.id,
-            registro=form.registro.data,
-            especialidade=form.especialidade.data,
-            formacao=form.formacao.data,
-            cpf=form.cpf.data,
-            telefone=form.telefone.data,
-            endereco=form.endereco.data,
-            ativo=form.ativo.data == '1'
-        )
+        data = {
+            'usuario_id': current_user.id,
+            'registro': form.registro.data,
+            'especialidade': form.especialidade.data,
+            'formacao': form.formacao.data,
+            'cpf': form.cpf.data,
+            'telefone': form.telefone.data,
+            'endereco': form.endereco.data,
+            'ativo': form.ativo.data == '1'
+        }
         
-        db.session.add(professor)
-        db.session.commit()
+        professor_repo.create(data)
         
         flash('Professor cadastrado com sucesso', 'success')
         return redirect(url_for('professores.index'))
@@ -96,7 +161,16 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes do professor."""
-    professor = Professor.query.get_or_404(id)
+    professor_data = professor_repo.get_by_id(id)
+    if not professor_data:
+        flash('Professor não encontrado', 'error')
+        return redirect(url_for('professores.index'))
+    
+    professor = _dict_to_professor_obj(professor_data)
+    
+    # Buscar matérias do professor
+    professor.materias = professor_repo.get_materias(id)
+    
     return render_template('professores/detalhe.html', professor=professor)
 
 
@@ -108,21 +182,28 @@ def editar(id):
         flash('Sem permissão para editar professores', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = Professor.query.get_or_404(id)
+    professor_data = professor_repo.get_by_id(id)
+    if not professor_data:
+        flash('Professor não encontrado', 'error')
+        return redirect(url_for('professores.index'))
+    
+    professor = _dict_to_professor_obj(professor_data)
     form = ProfessorForm(obj=professor)
     
     if form.validate_on_submit():
-        professor.especialidade = form.especialidade.data
-        professor.formacao = form.formacao.data
-        professor.cpf = form.cpf.data
-        professor.telefone = form.telefone.data
-        professor.endereco = form.endereco.data
-        professor.ativo = form.ativo.data == '1'
+        data = {
+            'especialidade': form.especialidade.data,
+            'formacao': form.formacao.data,
+            'cpf': form.cpf.data,
+            'telefone': form.telefone.data,
+            'endereco': form.endereco.data,
+            'ativo': form.ativo.data == '1'
+        }
         
-        db.session.commit()
+        professor_repo.update(id, data)
         
         flash('Professor atualizado com sucesso', 'success')
-        return redirect(url_for('professores.detalhe', id=professor.id))
+        return redirect(url_for('professores.detalhe', id=id))
     
     return render_template('professores/form.html', form=form, titulo='Editar Professor', professor=professor)
 
@@ -135,10 +216,7 @@ def excluir(id):
         flash('Sem permissão para excluir professores', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = Professor.query.get_or_404(id)
-    professor.ativo = False
-    
-    db.session.commit()
+    professor_repo.update(id, {'ativo': False})
     
     flash('Professor desativado com sucesso', 'success')
     return redirect(url_for('professores.index'))
@@ -153,21 +231,24 @@ def api_buscar():
     if len(termo) < 2:
         return jsonify([])
     
-    professores = Professor.query.join(Professor.usuario).filter(
-        Professor.ativo == True,
-        Usuario.nome.ilike(f'%{termo}%')
-    ).limit(10).all()
+    professores_raw = professor_repo.get_active_professors()
+    resultado = []
     
-    return jsonify([{
-        'id': p.id,
-        'nome': p.usuario.nome,
-        'registro': p.registro
-    } for p in professores])
+    for p in professores_raw:
+        usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+        if usuario and termo.lower() in usuario.get('nome', '').lower():
+            resultado.append({
+                'id': p.get('id'),
+                'nome': usuario.get('nome'),
+                'registro': p.get('registro')
+            })
+        if len(resultado) >= 10:
+            break
+    
+    return jsonify(resultado)
 
 
 # ==================== Disponibilidade do Professor ====================
-
-from datetime import time as time_class
 
 @professores_bp.route('/<int:id>/adicionar-disponibilidade', methods=['POST'])
 @login_required
@@ -177,29 +258,32 @@ def adicionar_disponibilidade(id):
         flash('Sem permissão', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = Professor.query.get_or_404(id)
+    professor_data = professor_repo.get_by_id(id)
+    if not professor_data:
+        flash('Professor não encontrado', 'error')
+        return redirect(url_for('professores.index'))
     
     dia_semana = request.form.get('dia_semana', type=int)
     horario_inicio = request.form.get('horario_inicio')
     horario_fim = request.form.get('horario_fim')
     
     if horario_inicio and horario_fim:
-        from app.models.especialidade import DisponibilidadeProfessor
+        from app.services.supabase_client import get_supabase_client
         
-        disp = DisponibilidadeProfessor(
-            professor_id=professor.id,
-            dia_semana=dia_semana,
-            horario_inicio=time_class.strptime(horario_inicio, '%H:%M'),
-            horario_fim=time_class.strptime(horario_fim, '%H:%M')
-        )
-        db.session.add(disp)
-        db.session.commit()
+        client = get_supabase_client()
+        client.table('disponibilidade_professores').insert({
+            'professor_id': id,
+            'dia_semana': dia_semana,
+            'horario_inicio': horario_inicio,
+            'horario_fim': horario_fim,
+            'ativo': True
+        }).execute()
         
         flash('Disponibilidade adicionada com sucesso', 'success')
     else:
         flash('Preencha os horários', 'error')
     
-    return redirect(url_for('professores.detalhe', id=professor.id))
+    return redirect(url_for('professores.detalhe', id=id))
 
 
 # ==================== Matérias do Professor ====================
@@ -212,26 +296,32 @@ def materias(id):
         flash('Sem permissão para gerenciar matérias de professores', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = Professor.query.get_or_404(id)
+    professor_data = professor_repo.get_by_id(id)
+    if not professor_data:
+        flash('Professor não encontrado', 'error')
+        return redirect(url_for('professores.index'))
+    
+    professor = _dict_to_professor_obj(professor_data)
     
     if request.method == 'POST':
         materia_ids = request.form.getlist('materias')
         
-        # Limpar matérias atuais
-        professor.materias.clear()
+        # Limpar matérias atuais via Supabase
+        from app.services.supabase_client import get_supabase_client
+        client = get_supabase_client()
+        client.table('professor_materias').delete().eq('professor_id', id).execute()
         
         # Adicionar novas matérias
         for mid in materia_ids:
-            materia = Materia.query.get(int(mid))
-            if materia:
-                professor.materias.append(materia)
+            professor_repo.associate_materia(id, int(mid))
         
-        db.session.commit()
         flash('Matérias do professor atualizadas com sucesso', 'success')
-        return redirect(url_for('professores.detalhe', id=professor.id))
+        return redirect(url_for('professores.detalhe', id=id))
     
-    materias = Materia.query.filter_by(ativa=True).order_by(Materia.nome).all()
-    return render_template('professores/materias.html', professor=professor, materias=materias)
+    materias_raw = materia_repo.get_active_materias()
+    professor.materias = professor_repo.get_materias(id)
+    
+    return render_template('professores/materias.html', professor=professor, materias=materias_raw)
 
 
 @professores_bp.route('/<int:id>/materias/adicionar', methods=['POST'])
@@ -241,18 +331,12 @@ def adicionar_materia(id):
     if not current_user.tem_permissao(['diretora', 'coordenacao']):
         return jsonify({'error': 'Sem permissão'}), 403
     
-    professor = Professor.query.get_or_404(id)
     materia_id = request.json.get('materia_id')
     
-    materia = Materia.query.get_or_404(materia_id)
+    if professor_repo.associate_materia(id, materia_id):
+        return jsonify({'success': True, 'message': 'Matéria adicionada'})
     
-    if materia in professor.materias:
-        return jsonify({'error': 'Professor já leciona esta matéria'}), 400
-    
-    professor.materias.append(materia)
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': 'Matéria adicionada'})
+    return jsonify({'error': 'Erro ao adicionar matéria'}), 400
 
 
 @professores_bp.route('/<int:id>/materias/<int:materia_id>', methods=['DELETE'])
@@ -262,13 +346,7 @@ def remover_materia(id, materia_id):
     if not current_user.tem_permissao(['diretora', 'coordenacao']):
         return jsonify({'error': 'Sem permissão'}), 403
     
-    professor = Professor.query.get_or_404(id)
-    materia = Materia.query.get_or_404(materia_id)
+    if professor_repo.dissociate_materia(id, materia_id):
+        return jsonify({'success': True, 'message': 'Matéria removida'})
     
-    if materia not in professor.materias:
-        return jsonify({'error': 'Professor não leciona esta matéria'}), 400
-    
-    professor.materias.remove(materia)
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': 'Matéria removida'})
+    return jsonify({'error': 'Erro ao remover matéria'}), 400

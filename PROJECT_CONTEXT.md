@@ -258,19 +258,21 @@ O projeto segue o padrão **Model-View-Controller (MVC)**:
 ### Fluxo de Requisições
 
 ```
-Requisição HTTP → Flask Router → Controller → Repository (Supabase REST) → Resposta
+Requisição HTTP → Flask Router → Controller → Repository → Supabase REST API → Resposta
                                     ↓
-                              Model (SQLAlchemy - legado)
+                              SupabaseUser (Flask-Login)
 ```
 
-**Fluxo com Supabase (novo):**
+**Fluxo Supabase (atual):**
 ```
 Requisição → Controller → Repository → Supabase Client → REST API → Supabase DB
+                                    ↓
+                              SupabaseUser (autenticação)
 ```
 
-**Fluxo legado (SQLAlchemy - ainda suportado):**
+**Fluxo legado (SQLAlchemy - apenas para compatibilidade):**
 ```
-Requisição → Controller → Model (SQLAlchemy) → SQLite/PostgreSQL → Resposta
+Requisição → Controller → Model (SQLAlchemy) → SQLite (fallback) → Resposta
 ```
 
 ---
@@ -632,9 +634,9 @@ Requisição → Controller → Model (SQLAlchemy) → SQLite/PostgreSQL → Res
 6. **Tema**: Respeitar variáveis CSS do sistema de temas
 
 ### Contexto Resumido
-- Flask + SQLAlchemy + Supabase (REST API)
+- Flask + Supabase (REST API) + SQLAlchemy (compatibilidade)
 - MVC com Blueprints + Camada de Repositório
-- Flask-Login para autenticação
+- Flask-Login com SupabaseUser wrapper
 - Supabase-py para acesso a dados via REST API
 - WTForms para formulários
 - Chart.js para gráficos
@@ -1118,6 +1120,39 @@ O sistema suporta migração gradual:
 ---
 
 ## 📋 Changelog
+
+### Versão 2.3.0 (28/03/2026)
+
+#### ✅ Migração Completa para Supabase REST API
+- **Todos os controllers** agora usam Supabase via REST API
+- **Removida dependência** de SQLAlchemy para operações de dados
+- **Flask-Login** integrado com Supabase via `SupabaseUser` wrapper
+
+#### Controllers Atualizados
+- `auth_controller.py` - Login/Registro via Supabase
+- `dashboard_controller.py` - Estatísticas via Supabase
+- `alunos_controller.py` - CRUD completo via Supabase
+- `professores_controller.py` - CRUD completo via Supabase
+- `turmas_controller.py` - CRUD completo via Supabase
+- `aulas_controller.py` - CRUD completo via Supabase
+- `materias_controller.py` - CRUD completo via Supabase
+- `calendario_controller.py` - Calendário via Supabase
+- `configuracoes_controller.py` - Configurações via Supabase
+- `analise_controller.py` - Análises via Supabase
+
+#### Novos Arquivos
+- `app/services/supabase_auth.py` - Wrapper SupabaseUser para Flask-Login
+
+#### Arquivos Modificados
+- `app/__init__.py` - User loader usa Supabase
+- Todos os controllers em `app/controllers/`
+
+#### Benefícios
+- Sistema 100% baseado em Supabase REST API
+- Sem necessidade de PostgreSQL local
+- Dados centralizados no Supabase
+- Melhor escalabilidade
+- Manutenção simplificada
 
 ### Versão 2.2.0 (28/03/2026)
 

@@ -1,11 +1,14 @@
-# app/controllers/configuracoes_controller.py - Controller de Configurações
+# app/controllers/configuracoes_controller.py - Controller de Configurações (Supabase)
 
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 
-from app import db
+from app.repositories import UsuarioRepository
 
 configuracoes_bp = Blueprint('configuracoes', __name__, url_prefix='/configuracoes')
+
+# Instância do repositório
+usuario_repo = UsuarioRepository()
 
 
 @configuracoes_bp.route('/')
@@ -24,8 +27,8 @@ def tema():
     if tema not in ['light', 'dark']:
         return jsonify({'error': 'Tema inválido'}), 400
     
+    usuario_repo.update(current_user.id, {'tema': tema})
     current_user.tema = tema
-    db.session.commit()
     
     return jsonify({'success': True, 'tema': tema})
 
@@ -38,12 +41,18 @@ def perfil():
         nome = request.form.get('nome')
         telefone = request.form.get('telefone')
         
+        data = {}
         if nome:
-            current_user.nome = nome
+            data['nome'] = nome
         if telefone:
-            current_user.telefone = telefone
+            data['telefone'] = telefone
         
-        db.session.commit()
+        if data:
+            usuario_repo.update(current_user.id, data)
+            if nome:
+                current_user.nome = nome
+            if telefone:
+                current_user.telefone = telefone
         
         return jsonify({'success': True, 'message': 'Perfil atualizado'})
     
@@ -67,7 +76,6 @@ def senha():
     if len(nova_senha) < 6:
         return jsonify({'error': 'Senha deve ter no mínimo 6 caracteres'}), 400
     
-    current_user.set_senha(nova_senha)
-    db.session.commit()
+    usuario_repo.update_password(current_user.id, nova_senha)
     
     return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})

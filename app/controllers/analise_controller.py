@@ -1,19 +1,20 @@
-# app/controllers/analise_controller.py - Controller de Análise
+# app/controllers/analise_controller.py - Controller de Análise (Supabase)
 
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required
-from sqlalchemy import func
 from datetime import datetime, timedelta
 
-from app import db
-from app.models.aluno import Aluno
-from app.models.turma import Turma
-from app.models.professor import Professor
-from app.models.aula import Aula
-from app.models.nota import Nota
-from app.models.frequencia import Frequencia
+from app.repositories import AlunoRepository, TurmaRepository, ProfessorRepository, AulaRepository, NotaRepository, FrequenciaRepository
 
 analise_bp = Blueprint('analise', __name__, url_prefix='/analise')
+
+# Instâncias dos repositórios
+aluno_repo = AlunoRepository()
+turma_repo = TurmaRepository()
+professor_repo = ProfessorRepository()
+aula_repo = AulaRepository()
+nota_repo = NotaRepository()
+frequencia_repo = FrequenciaRepository()
 
 
 @analise_bp.route('/')
@@ -28,16 +29,17 @@ def index():
 def api_geral():
     """API com estatísticas gerais."""
     # Distribuição de alunos por turma
-    turmas = Turma.query.filter_by(ativa=True).all()
+    turmas_raw = turma_repo.get_active_turmas()
     dist_turmas = [{
-        'nome': t.nome,
-        'total': t.total_alunos(),
-        'capacidade': t.capacidade_maxima
-    } for t in turmas]
+        'nome': t.get('nome', ''),
+        'total': turma_repo.count_alunos(t.get('id')),
+        'capacidade': t.get('capacidade_maxima', 40)
+    } for t in turmas_raw]
     
     # Aulas por mês (últimos 6 meses)
     hoje = datetime.utcnow().date()
     aulas_por_mes = []
+    
     for i in range(5, -1, -1):
         mes = hoje.month - i
         ano = hoje.year
@@ -45,11 +47,15 @@ def api_geral():
             mes += 12
             ano -= 1
         
-        total = Aula.query.filter(
-            func.extract('month', Aula.data) == mes,
-            func.extract('year', Aula.data) == ano,
-            Aula.status != 'cancelada'
-        ).count()
+        # Buscar aulas do mês
+        inicio_mes = datetime(ano, mes, 1).date()
+        if mes == 12:
+            fim_mes = datetime(ano + 1, 1, 1).date() - timedelta(days=1)
+        else:
+            fim_mes = datetime(ano, mes + 1, 1).date() - timedelta(days=1)
+        
+        aulas_mes = aula_repo.get_by_date_range(inicio_mes, fim_mes)
+        total = len([a for a in aulas_mes if a.get('status') != 'cancelada'])
         
         aulas_por_mes.append({
             'mes': f'{mes:02d}/{ano}',
@@ -59,9 +65,9 @@ def api_geral():
     return jsonify({
         'dist_turmas': dist_turmas,
         'aulas_por_mes': aulas_por_mes,
-        'total_alunos': Aluno.query.filter_by(status='ativo').count(),
-        'total_turmas': Turma.query.filter_by(ativa=True).count(),
-        'total_professores': Professor.query.filter_by(ativo=True).count()
+        'total_alunos': aluno_repo.count({'status': 'ativo'}),
+        'total_turmas': turma_repo.count({'ativa': True}),
+        'total_professores': professor_repo.count({'ativo': True})
     })
 
 
@@ -69,12 +75,19 @@ def api_geral():
 @login_required
 def api_alunos_risco():
     """API com alunos em risco de evasão."""
-    alunos = Aluno.query.filter_by(status='ativo').all()
+    alunos_raw = aluno_repo.get_active_students()
     
     alunos_risco = []
-    for aluno in alunos:
-        freq = aluno.percentual_frequencia()
-        media = aluno.media_notas()
+    for aluno in alunos_raw:
+        aluno_id = aluno.get('id')
+        
+        # Calcular frequência
+        freq_stats = frequencia_repo.get_aluno_stats(aluno_id)
+        freq = freq_stats.get('percentual', 100.0)
+        
+        # Calcular média
+        nota_stats = nota_repo.get_aluno_stats(aluno_id)
+        media = nota_stats.get('media', 0.0)
         
         # Calcular risco
         risco = 'baixo'
@@ -85,9 +98,9 @@ def api_alunos_risco():
         
         if risco != 'baixo':
             alunos_risco.append({
-                'id': aluno.id,
-                'nome': aluno.nome,
-                'matricula': aluno.matricula,
+                'id': aluno_id,
+                'nome': aluno.get('nome', ''),
+                'matricula': aluno.get('matricula', ''),
                 'frequencia': round(freq, 1),
                 'media': round(media, 1),
                 'risco': risco
@@ -103,19 +116,32 @@ def api_alunos_risco():
 @login_required
 def api_turmas_desempenho():
     """API com desempenho das turmas."""
-    turmas = Turma.query.filter_by(ativa=True).all()
+    turmas_raw = turma_repo.get_active_turmas()
     
     desempenho = []
-    for turma in turmas:
-        media = turma.media_turma()
-        freq = turma.percentual_frequencia_media()
+    for turma in turmas_raw:
+        turma_id = turma.get('id')
+        
+        # Calcular média da turma
+        media = nota_repo.get_turma_average(turma_id)
+        
+        # Calcular frequência média
+        alunos = turma_repo.get_alunos(turma_id)
+        total_freq = 0
+        count_alunos = len(alunos)
+        
+        for aluno in alunos:
+            freq_stats = frequencia_repo.get_aluno_stats(aluno.get('id'), turma_id)
+            total_freq += freq_stats.get('percentual', 100.0)
+        
+        freq_media = total_freq / count_alunos if count_alunos > 0 else 100.0
         
         desempenho.append({
-            'id': turma.id,
-            'nome': turma.nome,
+            'id': turma_id,
+            'nome': turma.get('nome', ''),
             'media': round(media, 1),
-            'frequencia': round(freq, 1),
-            'total_alunos': turma.total_alunos()
+            'frequencia': round(freq_media, 1),
+            'total_alunos': count_alunos
         })
     
     return jsonify(desempenho)
@@ -125,17 +151,30 @@ def api_turmas_desempenho():
 @login_required
 def api_disciplinas():
     """API com desempenho por disciplina."""
-    # Média de notas por matéria
-    notas_por_materia = db.session.query(
-        Aula.materia,
-        func.avg(Nota.valor).label('media'),
-        func.count(Nota.id).label('total')
-    ).join(Nota, Nota.aula_id == Aula.id).group_by(Aula.materia).all()
+    # Buscar todas as aulas e notas
+    aulas_raw = aula_repo.get_all()
+    
+    # Agrupar notas por matéria
+    materias_stats = {}
+    
+    for aula in aulas_raw:
+        materia = aula.get('materia', 'N/A')
+        aula_id = aula.get('id')
+        
+        # Buscar notas desta aula
+        notas = nota_repo.get_by_field('aula_id', aula_id)
+        
+        if materia not in materias_stats:
+            materias_stats[materia] = {'soma': 0, 'total': 0}
+        
+        for nota in notas:
+            materias_stats[materia]['soma'] += nota.get('valor', 0)
+            materias_stats[materia]['total'] += 1
     
     disciplinas = [{
         'materia': materia,
-        'media': round(float(media or 0), 1),
-        'total': total
-    } for materia, media, total in notas_por_materia]
+        'media': round(stats['soma'] / stats['total'], 1) if stats['total'] > 0 else 0,
+        'total': stats['total']
+    } for materia, stats in materias_stats.items()]
     
     return jsonify(disciplinas)

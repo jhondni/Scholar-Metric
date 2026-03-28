@@ -1,15 +1,18 @@
-# app/controllers/alunos_controller.py - Controller de Alunos
+# app/controllers/alunos_controller.py - Controller de Alunos (Supabase)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, DateField, SelectField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length, Optional
+from datetime import datetime
 
-from app import db
-from app.models.aluno import Aluno
+from app.repositories import AlunoRepository
 
 alunos_bp = Blueprint('alunos', __name__, url_prefix='/alunos')
+
+# Instância do repositório
+aluno_repo = AlunoRepository()
 
 
 # ==================== Formulários ====================
@@ -41,6 +44,39 @@ class AlunoForm(FlaskForm):
     ])
 
 
+# ==================== Funções Auxiliares ====================
+
+def _dict_to_aluno_obj(data):
+    """Converte dicionário do Supabase em objeto compatível com templates."""
+    if not data:
+        return None
+    
+    class AlunoObj:
+        def __init__(self, d):
+            self.id = d.get('id')
+            self.nome = d.get('nome', '')
+            self.matricula = d.get('matricula', '')
+            self.data_nascimento = d.get('data_nascimento')
+            if isinstance(self.data_nascimento, str):
+                try:
+                    self.data_nascimento = datetime.strptime(self.data_nascimento, '%Y-%m-%d').date()
+                except:
+                    self.data_nascimento = None
+            self.cpf = d.get('cpf', '')
+            self.email = d.get('email', '')
+            self.telefone = d.get('telefone', '')
+            self.endereco = d.get('endereco', '')
+            self.nome_responsavel = d.get('nome_responsavel', '')
+            self.telefone_responsavel = d.get('telefone_responsavel', '')
+            self.email_responsavel = d.get('email_responsavel', '')
+            self.ano_letivo = d.get('ano_letivo', '')
+            self.status = d.get('status', 'ativo')
+            self.criado_em = d.get('criado_em')
+            self.atualizado_em = d.get('atualizado_em')
+    
+    return AlunoObj(data)
+
+
 # ==================== Rotas ====================
 
 @alunos_bp.route('/')
@@ -51,22 +87,46 @@ def index():
     busca = request.args.get('busca', '')
     status = request.args.get('status', 'ativo')
     
-    query = Aluno.query
-    
+    # Buscar alunos do Supabase
     if busca:
-        query = query.filter(
-            Aluno.nome.ilike(f'%{busca}%') |
-            Aluno.matricula.ilike(f'%{busca}%')
-        )
+        alunos_raw = aluno_repo.search(busca)
+        if status:
+            alunos_raw = [a for a in alunos_raw if a.get('status') == status]
+    elif status:
+        alunos_raw = aluno_repo.get_by_field('status', status)
+    else:
+        alunos_raw = aluno_repo.get_all(order_by='nome')
     
-    if status:
-        query = query.filter_by(status=status)
+    # Paginação manual
+    per_page = 20
+    total = len(alunos_raw)
+    start = (page - 1) * per_page
+    end = start + per_page
+    alunos_page = alunos_raw[start:end]
     
-    alunos = query.order_by(Aluno.nome).paginate(
-        page=page, per_page=20, error_out=False
-    )
+    # Converter para objetos
+    alunos_obj = [_dict_to_aluno_obj(a) for a in alunos_page]
     
-    return render_template('alunos/index.html', alunos=alunos, busca=busca, status=status)
+    # Criar objeto de paginação compatível
+    class PaginateObj:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = (total + per_page - 1) // per_page
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        
+        def iter_pages(self):
+            for i in range(1, self.pages + 1):
+                yield i
+    
+    alunos_paginados = PaginateObj(alunos_obj, page, per_page, total)
+    
+    return render_template('alunos/index.html', alunos=alunos_paginados, busca=busca, status=status)
 
 
 @alunos_bp.route('/novo', methods=['GET', 'POST'])
@@ -80,27 +140,27 @@ def novo():
     form = AlunoForm()
     
     if form.validate_on_submit():
-        if Aluno.query.filter_by(matricula=form.matricula.data).first():
+        # Verificar se matrícula já existe
+        if aluno_repo.get_by_matricula(form.matricula.data):
             flash('Matrícula já cadastrada', 'error')
             return render_template('alunos/form.html', form=form, titulo='Novo Aluno')
         
-        aluno = Aluno(
-            nome=form.nome.data,
-            matricula=form.matricula.data,
-            data_nascimento=form.data_nascimento.data,
-            cpf=form.cpf.data,
-            email=form.email.data,
-            telefone=form.telefone.data,
-            endereco=form.endereco.data,
-            nome_responsavel=form.nome_responsavel.data,
-            telefone_responsavel=form.telefone_responsavel.data,
-            email_responsavel=form.email_responsavel.data,
-            ano_letivo=form.ano_letivo.data,
-            status=form.status.data
-        )
+        data = {
+            'nome': form.nome.data,
+            'matricula': form.matricula.data,
+            'data_nascimento': str(form.data_nascimento.data) if form.data_nascimento.data else None,
+            'cpf': form.cpf.data,
+            'email': form.email.data,
+            'telefone': form.telefone.data,
+            'endereco': form.endereco.data,
+            'nome_responsavel': form.nome_responsavel.data,
+            'telefone_responsavel': form.telefone_responsavel.data,
+            'email_responsavel': form.email_responsavel.data,
+            'ano_letivo': int(form.ano_letivo.data) if form.ano_letivo.data else None,
+            'status': form.status.data
+        }
         
-        db.session.add(aluno)
-        db.session.commit()
+        aluno_repo.create(data)
         
         flash('Aluno cadastrado com sucesso', 'success')
         return redirect(url_for('alunos.index'))
@@ -112,7 +172,12 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes do aluno."""
-    aluno = Aluno.query.get_or_404(id)
+    aluno_data = aluno_repo.get_by_id(id)
+    if not aluno_data:
+        flash('Aluno não encontrado', 'error')
+        return redirect(url_for('alunos.index'))
+    
+    aluno = _dict_to_aluno_obj(aluno_data)
     return render_template('alunos/detalhe.html', aluno=aluno)
 
 
@@ -124,26 +189,33 @@ def editar(id):
         flash('Sem permissão para editar alunos', 'error')
         return redirect(url_for('alunos.index'))
     
-    aluno = Aluno.query.get_or_404(id)
+    aluno_data = aluno_repo.get_by_id(id)
+    if not aluno_data:
+        flash('Aluno não encontrado', 'error')
+        return redirect(url_for('alunos.index'))
+    
+    aluno = _dict_to_aluno_obj(aluno_data)
     form = AlunoForm(obj=aluno)
     
     if form.validate_on_submit():
-        aluno.nome = form.nome.data
-        aluno.data_nascimento = form.data_nascimento.data
-        aluno.cpf = form.cpf.data
-        aluno.email = form.email.data
-        aluno.telefone = form.telefone.data
-        aluno.endereco = form.endereco.data
-        aluno.nome_responsavel = form.nome_responsavel.data
-        aluno.telefone_responsavel = form.telefone_responsavel.data
-        aluno.email_responsavel = form.email_responsavel.data
-        aluno.ano_letivo = form.ano_letivo.data
-        aluno.status = form.status.data
+        data = {
+            'nome': form.nome.data,
+            'data_nascimento': str(form.data_nascimento.data) if form.data_nascimento.data else None,
+            'cpf': form.cpf.data,
+            'email': form.email.data,
+            'telefone': form.telefone.data,
+            'endereco': form.endereco.data,
+            'nome_responsavel': form.nome_responsavel.data,
+            'telefone_responsavel': form.telefone_responsavel.data,
+            'email_responsavel': form.email_responsavel.data,
+            'ano_letivo': int(form.ano_letivo.data) if form.ano_letivo.data else None,
+            'status': form.status.data
+        }
         
-        db.session.commit()
+        aluno_repo.update(id, data)
         
         flash('Aluno atualizado com sucesso', 'success')
-        return redirect(url_for('alunos.detalhe', id=aluno.id))
+        return redirect(url_for('alunos.detalhe', id=id))
     
     return render_template('alunos/form.html', form=form, titulo='Editar Aluno', aluno=aluno)
 
@@ -156,10 +228,7 @@ def excluir(id):
         flash('Sem permissão para excluir alunos', 'error')
         return redirect(url_for('alunos.index'))
     
-    aluno = Aluno.query.get_or_404(id)
-    aluno.status = 'inativo'
-    
-    db.session.commit()
+    aluno_repo.update(id, {'status': 'inativo'})
     
     flash('Aluno desativado com sucesso', 'success')
     return redirect(url_for('alunos.index'))
@@ -174,13 +243,11 @@ def api_buscar():
     if len(termo) < 2:
         return jsonify([])
     
-    alunos = Aluno.query.filter(
-        Aluno.status == 'ativo',
-        Aluno.nome.ilike(f'%{termo}%')
-    ).limit(10).all()
+    alunos = aluno_repo.search(termo)
+    alunos_ativos = [a for a in alunos if a.get('status') == 'ativo'][:10]
     
     return jsonify([{
-        'id': a.id,
-        'nome': a.nome,
-        'matricula': a.matricula
-    } for a in alunos])
+        'id': a.get('id'),
+        'nome': a.get('nome'),
+        'matricula': a.get('matricula')
+    } for a in alunos_ativos])

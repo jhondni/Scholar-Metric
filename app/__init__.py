@@ -45,6 +45,9 @@ def create_app(config_name='default'):
     login_manager.login_message = 'Por favor, faça login para acessar esta página.'
     login_manager.login_message_category = 'warning'
     
+    # Configurar user loader para Supabase
+    _setup_user_loader(login_manager)
+    
     # Registrar blueprints
     from app.controllers.auth_controller import auth_bp
     from app.controllers.dashboard_controller import dashboard_bp
@@ -75,9 +78,7 @@ def create_app(config_name='default'):
     if not is_serverless():
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Criar tabelas do banco de dados
-    # Em serverless, isso pode falhar se o DB não estiver acessível
-    # por isso tratamos o erro de forma resiliente
+    # Criar tabelas do banco de dados (mantido para compatibilidade)
     with app.app_context():
         try:
             db.create_all()
@@ -86,10 +87,40 @@ def create_app(config_name='default'):
         except Exception as e:
             if not is_serverless():
                 print(f"[ERRO] Falha ao criar tabelas: {e}")
-            # Em serverless, não falhar se não conseguir criar tabelas
-            # O banco deve ser migrado previamente via Flask-Migrate
     
     return app
+
+
+def _setup_user_loader(login_manager):
+    """
+    Configura o user loader do Flask-Login para usar Supabase.
+    
+    Tenta carregar o usuário do Supabase primeiro.
+    Se falhar, faz fallback para SQLAlchemy.
+    """
+    @login_manager.user_loader
+    def load_user(user_id):
+        """Carrega usuário para a sessão do Flask-Login."""
+        # Tentar Supabase primeiro
+        try:
+            from app.services.supabase_client import is_supabase_configured
+            if is_supabase_configured():
+                from app.repositories import UsuarioRepository
+                from app.services.supabase_auth import SupabaseUser
+                
+                repo = UsuarioRepository()
+                user_data = repo.get_by_id(int(user_id))
+                if user_data:
+                    return SupabaseUser(user_data)
+        except Exception as e:
+            print(f"[AVISO] Falha ao carregar usuário do Supabase: {e}")
+        
+        # Fallback para SQLAlchemy
+        try:
+            from app.models.usuario import Usuario
+            return Usuario.query.get(int(user_id))
+        except Exception:
+            return None
 
 
 def register_error_handlers(app):
@@ -103,7 +134,10 @@ def register_error_handlers(app):
     @app.errorhandler(500)
     def internal_error(error):
         from flask import render_template
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except:
+            pass
         return render_template('errors/500.html'), 500
     
     @app.errorhandler(403)

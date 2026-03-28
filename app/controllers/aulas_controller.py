@@ -1,20 +1,23 @@
-# app/controllers/aulas_controller.py - Controller de Aulas
+# app/controllers/aulas_controller.py - Controller de Aulas (Supabase)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, DateField, TimeField, SelectField, TextAreaField, BooleanField
 from wtforms.validators import DataRequired, Length, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as time_class
 
-from app import db
-from app.models.aula import Aula
-from app.models.turma import Turma
-from app.models.professor import Professor
-from app.models.feriado import Feriado
-from app.models.dia_nao_letivo import DiaNaoLetivo
+from app.repositories import AulaRepository, TurmaRepository, ProfessorRepository, FrequenciaRepository, FeriadoRepository, UsuarioRepository
 
 aulas_bp = Blueprint('aulas', __name__, url_prefix='/aulas')
+
+# Instâncias dos repositórios
+aula_repo = AulaRepository()
+turma_repo = TurmaRepository()
+professor_repo = ProfessorRepository()
+frequencia_repo = FrequenciaRepository()
+feriado_repo = FeriadoRepository()
+usuario_repo = UsuarioRepository()
 
 
 # ==================== Formulários ====================
@@ -47,60 +50,83 @@ class AulaForm(FlaskForm):
 
 # ==================== Funções Auxiliares ====================
 
+def _dict_to_aula_obj(data):
+    """Converte dicionário do Supabase em objeto compatível com templates."""
+    if not data:
+        return None
+    
+    turma_data = turma_repo.get_by_id(data.get('turma_id'))
+    professor_data = professor_repo.get_by_id(data.get('professor_id'))
+    usuario_data = usuario_repo.get_by_id(professor_data.get('usuario_id')) if professor_data else None
+    
+    class TurmaObj:
+        def __init__(self, d):
+            self.id = d.get('id')
+            self.nome = d.get('nome', '')
+            self.codigo = d.get('codigo', '')
+    
+    class UsuarioObj:
+        def __init__(self, d):
+            self.nome = d.get('nome', '') if d else ''
+    
+    class ProfessorObj:
+        def __init__(self, d, usuario):
+            self.id = d.get('id') if d else None
+            self.usuario = usuario
+    
+    class AulaObj:
+        def __init__(self, d, turma, professor):
+            self.id = d.get('id')
+            self.materia = d.get('materia', '')
+            self.descricao = d.get('descricao', '')
+            self.turma_id = d.get('turma_id')
+            self.professor_id = d.get('professor_id')
+            self.data = d.get('data')
+            if isinstance(self.data, str):
+                try:
+                    self.data = datetime.strptime(self.data, '%Y-%m-%d').date()
+                except:
+                    pass
+            self.horario_inicio = d.get('horario_inicio')
+            if isinstance(self.horario_inicio, str):
+                try:
+                    self.horario_inicio = datetime.strptime(self.horario_inicio, '%H:%M:%S').time()
+                except:
+                    pass
+            self.horario_fim = d.get('horario_fim')
+            if isinstance(self.horario_fim, str):
+                try:
+                    self.horario_fim = datetime.strptime(self.horario_fim, '%H:%M:%S').time()
+                except:
+                    pass
+            self.recorrente = d.get('recorrente', False)
+            self.tipo_recorrencia = d.get('tipo_recorrencia')
+            self.dia_semana = d.get('dia_semana')
+            self.data_fim_recorrencia = d.get('data_fim_recorrencia')
+            self.aula_pai_id = d.get('aula_pai_id')
+            self.status = d.get('status', 'agendada')
+            self.criado_em = d.get('criado_em')
+            self.atualizado_em = d.get('atualizado_em')
+            self.turma = turma
+            self.professor = professor
+    
+    turma = TurmaObj(turma_data) if turma_data else TurmaObj({})
+    usuario = UsuarioObj(usuario_data)
+    professor = ProfessorObj(professor_data, usuario)
+    
+    return AulaObj(data, turma, professor)
+
+
 def verificar_dia_letivo(data):
     """Verifica se um dia é letivo (não é feriado nem dia não letivo)."""
-    if Feriado.is_feriado(data):
+    from app.repositories import DiaNaoLetivoRepository
+    dia_repo = DiaNaoLetivoRepository()
+    
+    if feriado_repo.is_feriado(data):
         return False
-    if DiaNaoLetivo.is_dia_nao_letivo(data):
+    if dia_repo.is_dia_nao_letivo(data):
         return False
     return True
-
-
-def criar_aulas_recorrentes(aula_pai, datas):
-    """Cria aulas filhas para datas recorrentes."""
-    aulas_criadas = []
-    
-    for data in datas:
-        # Pular feriados e dias não letivos
-        if not verificar_dia_letivo(data):
-            continue
-        
-        # Verificar se já existe aula neste horário para a turma
-        conflito = Aula.query.filter(
-            Aula.turma_id == aula_pai.turma_id,
-            Aula.data == data,
-            Aula.status != 'cancelada',
-            db.or_(
-                db.and_(
-                    Aula.horario_inicio <= aula_pai.horario_inicio,
-                    Aula.horario_fim > aula_pai.horario_inicio
-                ),
-                db.and_(
-                    Aula.horario_inicio < aula_pai.horario_fim,
-                    Aula.horario_fim >= aula_pai.horario_fim
-                )
-            )
-        ).first()
-        
-        if conflito:
-            continue
-        
-        aula_filha = Aula(
-            materia=aula_pai.materia,
-            descricao=aula_pai.descricao,
-            turma_id=aula_pai.turma_id,
-            professor_id=aula_pai.professor_id,
-            data=data,
-            horario_inicio=aula_pai.horario_inicio,
-            horario_fim=aula_pai.horario_fim,
-            recorrente=False,
-            aula_pai_id=aula_pai.id
-        )
-        
-        db.session.add(aula_filha)
-        aulas_criadas.append(aula_filha)
-    
-    return aulas_criadas
 
 
 # ==================== Rotas ====================
@@ -115,28 +141,51 @@ def index():
     data_inicio = request.args.get('data_inicio')
     data_fim = request.args.get('data_fim')
     
-    query = Aula.query
+    # Buscar aulas
+    if data_inicio and data_fim:
+        inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+        fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+        aulas_raw = aula_repo.get_by_date_range(inicio, fim, turma_id)
+    elif turma_id:
+        aulas_raw = aula_repo.get_by_turma(turma_id)
+    else:
+        aulas_raw = aula_repo.get_all(order_by='-data')
     
     if busca:
-        query = query.filter(Aula.materia.ilike(f'%{busca}%'))
+        aulas_raw = [a for a in aulas_raw if busca.lower() in a.get('materia', '').lower()]
     
-    if turma_id:
-        query = query.filter_by(turma_id=turma_id)
+    # Paginação manual
+    per_page = 20
+    total = len(aulas_raw)
+    start = (page - 1) * per_page
+    end = start + per_page
+    aulas_page = aulas_raw[start:end]
     
-    if data_inicio:
-        query = query.filter(Aula.data >= datetime.strptime(data_inicio, '%Y-%m-%d').date())
+    aulas_obj = [_dict_to_aula_obj(a) for a in aulas_page]
     
-    if data_fim:
-        query = query.filter(Aula.data <= datetime.strptime(data_fim, '%Y-%m-%d').date())
+    class PaginateObj:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = (total + per_page - 1) // per_page
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        
+        def iter_pages(self):
+            for i in range(1, self.pages + 1):
+                yield i
     
-    aulas = query.order_by(Aula.data.desc(), Aula.horario_inicio).paginate(
-        page=page, per_page=20, error_out=False
-    )
+    aulas_paginadas = PaginateObj(aulas_obj, page, per_page, total)
     
-    turmas = Turma.query.filter_by(ativa=True).order_by(Turma.nome).all()
+    turmas_raw = turma_repo.get_active_turmas()
+    turmas = [type('Turma', (), {'id': t.get('id'), 'nome': t.get('nome'), 'codigo': t.get('codigo')})() for t in turmas_raw]
     
     return render_template('aulas/index.html', 
-        aulas=aulas, 
+        aulas=aulas_paginadas, 
         busca=busca, 
         turmas=turmas,
         turma_id=turma_id,
@@ -151,31 +200,22 @@ def novo():
     """Criar nova aula."""
     form = AulaForm()
     
-    # Popular choices de turmas e professores
-    form.turma_id.choices = [(t.id, f'{t.nome} ({t.codigo})') 
-                             for t in Turma.query.filter_by(ativa=True).order_by(Turma.nome).all()]
-    form.professor_id.choices = [(p.id, p.usuario.nome) 
-                                 for p in Professor.query.filter_by(ativo=True).join(Professor.usuario).order_by().all()]
+    # Popular choices
+    turmas_raw = turma_repo.get_active_turmas()
+    form.turma_id.choices = [(t.get('id'), f'{t.get("nome")} ({t.get("codigo")})') for t in turmas_raw]
+    
+    professores_raw = professor_repo.get_active_professors()
+    professor_choices = []
+    for p in professores_raw:
+        usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+        nome = usuario.get('nome', 'N/A') if usuario else 'N/A'
+        professor_choices.append((p.get('id'), nome))
+    form.professor_id.choices = professor_choices
     
     if form.validate_on_submit():
         # Verificar conflito de horário
-        conflito = Aula.query.filter(
-            Aula.turma_id == form.turma_id.data,
-            Aula.data == form.data.data,
-            Aula.status != 'cancelada',
-            db.or_(
-                db.and_(
-                    Aula.horario_inicio <= form.horario_inicio.data,
-                    Aula.horario_fim > form.horario_inicio.data
-                ),
-                db.and_(
-                    Aula.horario_inicio < form.horario_fim.data,
-                    Aula.horario_fim >= form.horario_fim.data
-                )
-            )
-        ).first()
-        
-        if conflito:
+        if aula_repo.check_conflict(form.turma_id.data, form.data.data, 
+                                    str(form.horario_inicio.data), str(form.horario_fim.data)):
             flash('Já existe uma aula agendada neste horário para esta turma', 'error')
             return render_template('aulas/form.html', form=form, titulo='Nova Aula')
         
@@ -184,34 +224,23 @@ def novo():
             flash('Não é possível agendar aulas em feriados ou dias não letivos', 'error')
             return render_template('aulas/form.html', form=form, titulo='Nova Aula')
         
-        # Criar aula principal
-        aula = Aula(
-            materia=form.materia.data,
-            descricao=form.descricao.data,
-            turma_id=form.turma_id.data,
-            professor_id=form.professor_id.data,
-            data=form.data.data,
-            horario_inicio=form.horario_inicio.data,
-            horario_fim=form.horario_fim.data,
-            recorrente=form.recorrente.data,
-            tipo_recorrencia=form.tipo_recorrencia.data if form.recorrente.data else None,
-            data_fim_recorrencia=form.data_fim_recorrencia.data if form.recorrente.data else None,
-            dia_semana=form.data.data.weekday() if form.recorrente.data else None
-        )
+        # Criar aula
+        data = {
+            'materia': form.materia.data,
+            'descricao': form.descricao.data,
+            'turma_id': form.turma_id.data,
+            'professor_id': form.professor_id.data,
+            'data': str(form.data.data),
+            'horario_inicio': str(form.horario_inicio.data),
+            'horario_fim': str(form.horario_fim.data),
+            'recorrente': form.recorrente.data,
+            'tipo_recorrencia': form.tipo_recorrencia.data if form.recorrente.data else None,
+            'data_fim_recorrencia': str(form.data_fim_recorrencia.data) if form.recorrente.data and form.data_fim_recorrencia.data else None,
+            'dia_semana': form.data.data.weekday() if form.recorrente.data else None,
+            'status': 'agendada'
+        }
         
-        db.session.add(aula)
-        db.session.flush()  # Para obter o ID
-        
-        # Se for recorrente, criar aulas filhas
-        if form.recorrente.data and form.data_fim_recorrencia.data:
-            datas = Aula.gerar_datas_recorrencia(
-                form.data.data,
-                form.tipo_recorrencia.data,
-                form.data_fim_recorrencia.data
-            )
-            criar_aulas_recorrentes(aula, datas[1:])  # Pular a primeira data (já criada)
-        
-        db.session.commit()
+        aula_repo.create(data)
         
         flash('Aula criada com sucesso', 'success')
         return redirect(url_for('aulas.index'))
@@ -223,7 +252,12 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes da aula."""
-    aula = Aula.query.get_or_404(id)
+    aula_data = aula_repo.get_by_id(id)
+    if not aula_data:
+        flash('Aula não encontrada', 'error')
+        return redirect(url_for('aulas.index'))
+    
+    aula = _dict_to_aula_obj(aula_data)
     return render_template('aulas/detalhe.html', aula=aula)
 
 
@@ -231,32 +265,48 @@ def detalhe(id):
 @login_required
 def editar(id):
     """Editar aula."""
-    aula = Aula.query.get_or_404(id)
-    
-    # Verificar permissão
-    if current_user.tipo == 'professor' and aula.professor_id != current_user.professor.id:
-        flash('Sem permissão para editar esta aula', 'error')
+    aula_data = aula_repo.get_by_id(id)
+    if not aula_data:
+        flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
+    # Verificar permissão
+    if current_user.tipo == 'professor':
+        professor_data = professor_repo.get_by_usuario_id(current_user.id)
+        if professor_data and aula_data.get('professor_id') != professor_data.get('id'):
+            flash('Sem permissão para editar esta aula', 'error')
+            return redirect(url_for('aulas.index'))
+    
+    aula = _dict_to_aula_obj(aula_data)
     form = AulaForm(obj=aula)
-    form.turma_id.choices = [(t.id, f'{t.nome} ({t.codigo})') 
-                             for t in Turma.query.filter_by(ativa=True).order_by(Turma.nome).all()]
-    form.professor_id.choices = [(p.id, p.usuario.nome) 
-                                 for p in Professor.query.filter_by(ativo=True).join(Professor.usuario).all()]
+    
+    # Popular choices
+    turmas_raw = turma_repo.get_active_turmas()
+    form.turma_id.choices = [(t.get('id'), f'{t.get("nome")} ({t.get("codigo")})') for t in turmas_raw]
+    
+    professores_raw = professor_repo.get_active_professores()
+    professor_choices = []
+    for p in professores_raw:
+        usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+        nome = usuario.get('nome', 'N/A') if usuario else 'N/A'
+        professor_choices.append((p.get('id'), nome))
+    form.professor_id.choices = professor_choices
     
     if form.validate_on_submit():
-        aula.materia = form.materia.data
-        aula.descricao = form.descricao.data
-        aula.turma_id = form.turma_id.data
-        aula.professor_id = form.professor_id.data
-        aula.data = form.data.data
-        aula.horario_inicio = form.horario_inicio.data
-        aula.horario_fim = form.horario_fim.data
+        data = {
+            'materia': form.materia.data,
+            'descricao': form.descricao.data,
+            'turma_id': form.turma_id.data,
+            'professor_id': form.professor_id.data,
+            'data': str(form.data.data),
+            'horario_inicio': str(form.horario_inicio.data),
+            'horario_fim': str(form.horario_fim.data)
+        }
         
-        db.session.commit()
+        aula_repo.update(id, data)
         
         flash('Aula atualizada com sucesso', 'success')
-        return redirect(url_for('aulas.detalhe', id=aula.id))
+        return redirect(url_for('aulas.detalhe', id=id))
     
     return render_template('aulas/form.html', form=form, titulo='Editar Aula', aula=aula)
 
@@ -265,14 +315,19 @@ def editar(id):
 @login_required
 def cancelar(id):
     """Cancelar aula."""
-    aula = Aula.query.get_or_404(id)
-    
-    if current_user.tipo == 'professor' and aula.professor_id != current_user.professor.id:
-        flash('Sem permissão para cancelar esta aula', 'error')
+    aula_data = aula_repo.get_by_id(id)
+    if not aula_data:
+        flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
-    aula.status = 'cancelada'
-    db.session.commit()
+    # Verificar permissão
+    if current_user.tipo == 'professor':
+        professor_data = professor_repo.get_by_usuario_id(current_user.id)
+        if professor_data and aula_data.get('professor_id') != professor_data.get('id'):
+            flash('Sem permissão para cancelar esta aula', 'error')
+            return redirect(url_for('aulas.index'))
+    
+    aula_repo.cancel_aula(id)
     
     flash('Aula cancelada com sucesso', 'success')
     return redirect(url_for('aulas.index'))
@@ -282,48 +337,52 @@ def cancelar(id):
 @login_required
 def realizar(id):
     """Marcar aula como realizada."""
-    aula = Aula.query.get_or_404(id)
-    
-    if current_user.tipo == 'professor' and aula.professor_id != current_user.professor.id:
-        flash('Sem permissão', 'error')
+    aula_data = aula_repo.get_by_id(id)
+    if not aula_data:
+        flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
-    aula.status = 'realizada'
-    db.session.commit()
+    # Verificar permissão
+    if current_user.tipo == 'professor':
+        professor_data = professor_repo.get_by_usuario_id(current_user.id)
+        if professor_data and aula_data.get('professor_id') != professor_data.get('id'):
+            flash('Sem permissão', 'error')
+            return redirect(url_for('aulas.index'))
+    
+    aula_repo.realize_aula(id)
     
     flash('Aula marcada como realizada', 'success')
-    return redirect(url_for('aulas.detalhe', id=aula.id))
+    return redirect(url_for('aulas.detalhe', id=id))
 
 
 @aulas_bp.route('/<int:id>/frequencia', methods=['GET', 'POST'])
 @login_required
 def frequencia(id):
     """Gerenciar frequência da aula."""
-    aula = Aula.query.get_or_404(id)
+    aula_data = aula_repo.get_by_id(id)
+    if not aula_data:
+        flash('Aula não encontrada', 'error')
+        return redirect(url_for('aulas.index'))
+    
+    aula = _dict_to_aula_obj(aula_data)
     
     if request.method == 'POST':
-        from app.models.frequencia import Frequencia
+        alunos = turma_repo.get_alunos(aula_data.get('turma_id'))
         
-        for aluno in aula.turma.alunos:
-            presente = request.form.get(f'aluno_{aluno.id}') == 'on'
-            justificativa = request.form.get(f'justificativa_{aluno.id}', '')
+        presencas = []
+        for aluno in alunos:
+            presente = request.form.get(f'aluno_{aluno.get("id")}') == 'on'
+            justificativa = request.form.get(f'justificativa_{aluno.get("id")}', '')
             
-            freq = Frequencia.query.filter_by(aluno_id=aluno.id, aula_id=aula.id).first()
-            
-            if freq:
-                freq.presente = presente
-                freq.justificativa = justificativa
-            else:
-                freq = Frequencia(
-                    aluno_id=aluno.id,
-                    aula_id=aula.id,
-                    presente=presente,
-                    justificativa=justificativa
-                )
-                db.session.add(freq)
+            presencas.append({
+                'aluno_id': aluno.get('id'),
+                'presente': presente,
+                'justificativa': justificativa
+            })
         
-        db.session.commit()
+        frequencia_repo.register_batch(id, presencas)
+        
         flash('Frequência registrada com sucesso', 'success')
-        return redirect(url_for('aulas.detalhe', id=aula.id))
+        return redirect(url_for('aulas.detalhe', id=id))
     
     return render_template('aulas/frequencia.html', aula=aula)
