@@ -1,4 +1,4 @@
-# app/controllers/alunos_controller.py - Controller de Alunos (Supabase)
+# app/controllers/alunos_controller.py - Controller de Alunos (Supabase + DTOs)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
@@ -8,11 +8,17 @@ from wtforms.validators import DataRequired, Email, Length, Optional
 from datetime import datetime
 
 from app.repositories import AlunoRepository
+from app.dtos.aluno_dto import AlunoDTO
 
 alunos_bp = Blueprint('alunos', __name__, url_prefix='/alunos')
 
-# Instância do repositório
-aluno_repo = AlunoRepository()
+# Instâncias dos repositórios (reutilizadas)
+_aluno_repo = AlunoRepository()
+
+# Dicionário de repositórios para DTOs
+_repos = {
+    'aluno': _aluno_repo
+}
 
 
 # ==================== Formulários ====================
@@ -46,35 +52,30 @@ class AlunoForm(FlaskForm):
 
 # ==================== Funções Auxiliares ====================
 
-def _dict_to_aluno_obj(data):
-    """Converte dicionário do Supabase em objeto compatível com templates."""
-    if not data:
-        return None
+def _paginate(items: list, page: int, per_page: int = 20):
+    """Cria objeto de paginação compatível com Flask-SQLAlchemy."""
+    total = len(items)
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = items[start:end]
     
-    class AlunoObj:
-        def __init__(self, d):
-            self.id = d.get('id')
-            self.nome = d.get('nome', '')
-            self.matricula = d.get('matricula', '')
-            self.data_nascimento = d.get('data_nascimento')
-            if isinstance(self.data_nascimento, str):
-                try:
-                    self.data_nascimento = datetime.strptime(self.data_nascimento, '%Y-%m-%d').date()
-                except:
-                    self.data_nascimento = None
-            self.cpf = d.get('cpf', '')
-            self.email = d.get('email', '')
-            self.telefone = d.get('telefone', '')
-            self.endereco = d.get('endereco', '')
-            self.nome_responsavel = d.get('nome_responsavel', '')
-            self.telefone_responsavel = d.get('telefone_responsavel', '')
-            self.email_responsavel = d.get('email_responsavel', '')
-            self.ano_letivo = d.get('ano_letivo', '')
-            self.status = d.get('status', 'ativo')
-            self.criado_em = d.get('criado_em')
-            self.atualizado_em = d.get('atualizado_em')
+    class PaginateObj:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = max(1, (total + per_page - 1) // per_page)
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        
+        def iter_pages(self):
+            for i in range(1, self.pages + 1):
+                yield i
     
-    return AlunoObj(data)
+    return PaginateObj(page_items, page, per_page, total)
 
 
 # ==================== Rotas ====================
@@ -89,44 +90,18 @@ def index():
     
     # Buscar alunos do Supabase
     if busca:
-        alunos_raw = aluno_repo.search(busca)
+        alunos_raw = _aluno_repo.search(busca)
         if status:
             alunos_raw = [a for a in alunos_raw if a.get('status') == status]
     elif status:
-        alunos_raw = aluno_repo.get_by_field('status', status)
+        alunos_raw = _aluno_repo.get_by_field('status', status)
     else:
-        alunos_raw = aluno_repo.get_all(order_by='nome')
+        alunos_raw = _aluno_repo.get_all(order_by='nome')
     
-    # Paginação manual
-    per_page = 20
-    total = len(alunos_raw)
-    start = (page - 1) * per_page
-    end = start + per_page
-    alunos_page = alunos_raw[start:end]
+    alunos_list = [AlunoDTO(a, _repos) for a in alunos_raw]
+    alunos = _paginate(alunos_list, page)
     
-    # Converter para objetos
-    alunos_obj = [_dict_to_aluno_obj(a) for a in alunos_page]
-    
-    # Criar objeto de paginação compatível
-    class PaginateObj:
-        def __init__(self, items, page, per_page, total):
-            self.items = items
-            self.page = page
-            self.per_page = per_page
-            self.total = total
-            self.pages = (total + per_page - 1) // per_page
-            self.has_prev = page > 1
-            self.has_next = page < self.pages
-            self.prev_num = page - 1
-            self.next_num = page + 1
-        
-        def iter_pages(self):
-            for i in range(1, self.pages + 1):
-                yield i
-    
-    alunos_paginados = PaginateObj(alunos_obj, page, per_page, total)
-    
-    return render_template('alunos/index.html', alunos=alunos_paginados, busca=busca, status=status)
+    return render_template('alunos/index.html', alunos=alunos, busca=busca, status=status)
 
 
 @alunos_bp.route('/novo', methods=['GET', 'POST'])
@@ -141,7 +116,7 @@ def novo():
     
     if form.validate_on_submit():
         # Verificar se matrícula já existe
-        if aluno_repo.get_by_matricula(form.matricula.data):
+        if _aluno_repo.get_by_matricula(form.matricula.data):
             flash('Matrícula já cadastrada', 'error')
             return render_template('alunos/form.html', form=form, titulo='Novo Aluno')
         
@@ -160,7 +135,7 @@ def novo():
             'status': form.status.data
         }
         
-        aluno_repo.create(data)
+        _aluno_repo.create(data)
         
         flash('Aluno cadastrado com sucesso', 'success')
         return redirect(url_for('alunos.index'))
@@ -172,12 +147,12 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes do aluno."""
-    aluno_data = aluno_repo.get_by_id(id)
+    aluno_data = _aluno_repo.get_by_id(id)
     if not aluno_data:
         flash('Aluno não encontrado', 'error')
         return redirect(url_for('alunos.index'))
     
-    aluno = _dict_to_aluno_obj(aluno_data)
+    aluno = AlunoDTO(aluno_data, _repos)
     return render_template('alunos/detalhe.html', aluno=aluno)
 
 
@@ -189,12 +164,12 @@ def editar(id):
         flash('Sem permissão para editar alunos', 'error')
         return redirect(url_for('alunos.index'))
     
-    aluno_data = aluno_repo.get_by_id(id)
+    aluno_data = _aluno_repo.get_by_id(id)
     if not aluno_data:
         flash('Aluno não encontrado', 'error')
         return redirect(url_for('alunos.index'))
     
-    aluno = _dict_to_aluno_obj(aluno_data)
+    aluno = AlunoDTO(aluno_data, _repos)
     form = AlunoForm(obj=aluno)
     
     if form.validate_on_submit():
@@ -212,7 +187,7 @@ def editar(id):
             'status': form.status.data
         }
         
-        aluno_repo.update(id, data)
+        _aluno_repo.update(id, data)
         
         flash('Aluno atualizado com sucesso', 'success')
         return redirect(url_for('alunos.detalhe', id=id))
@@ -228,7 +203,7 @@ def excluir(id):
         flash('Sem permissão para excluir alunos', 'error')
         return redirect(url_for('alunos.index'))
     
-    aluno_repo.update(id, {'status': 'inativo'})
+    _aluno_repo.update(id, {'status': 'inativo'})
     
     flash('Aluno desativado com sucesso', 'success')
     return redirect(url_for('alunos.index'))
@@ -243,7 +218,7 @@ def api_buscar():
     if len(termo) < 2:
         return jsonify([])
     
-    alunos = aluno_repo.search(termo)
+    alunos = _aluno_repo.search(termo)
     alunos_ativos = [a for a in alunos if a.get('status') == 'ativo'][:10]
     
     return jsonify([{

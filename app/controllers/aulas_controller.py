@@ -1,4 +1,4 @@
-# app/controllers/aulas_controller.py - Controller de Aulas (Supabase)
+# app/controllers/aulas_controller.py - Controller de Aulas (Supabase + DTOs)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
@@ -8,16 +8,27 @@ from wtforms.validators import DataRequired, Length, Optional
 from datetime import datetime, timedelta, time as time_class
 
 from app.repositories import AulaRepository, TurmaRepository, ProfessorRepository, FrequenciaRepository, FeriadoRepository, UsuarioRepository
+from app.dtos.aula_dto import AulaDTO
 
 aulas_bp = Blueprint('aulas', __name__, url_prefix='/aulas')
 
-# Instâncias dos repositórios
-aula_repo = AulaRepository()
-turma_repo = TurmaRepository()
-professor_repo = ProfessorRepository()
-frequencia_repo = FrequenciaRepository()
-feriado_repo = FeriadoRepository()
-usuario_repo = UsuarioRepository()
+# Instâncias dos repositórios (reutilizadas)
+_aula_repo = AulaRepository()
+_turma_repo = TurmaRepository()
+_professor_repo = ProfessorRepository()
+_frequencia_repo = FrequenciaRepository()
+_feriado_repo = FeriadoRepository()
+_usuario_repo = UsuarioRepository()
+
+# Dicionário de repositórios para DTOs
+_repos = {
+    'aula': _aula_repo,
+    'turma': _turma_repo,
+    'professor': _professor_repo,
+    'frequencia': _frequencia_repo,
+    'feriado': _feriado_repo,
+    'usuario': _usuario_repo
+}
 
 
 # ==================== Formulários ====================
@@ -50,79 +61,38 @@ class AulaForm(FlaskForm):
 
 # ==================== Funções Auxiliares ====================
 
-def _dict_to_aula_obj(data):
-    """Converte dicionário do Supabase em objeto compatível com templates."""
-    if not data:
-        return None
+def _paginate(items: list, page: int, per_page: int = 20):
+    """Cria objeto de paginação compatível com Flask-SQLAlchemy."""
+    total = len(items)
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = items[start:end]
     
-    turma_data = turma_repo.get_by_id(data.get('turma_id'))
-    professor_data = professor_repo.get_by_id(data.get('professor_id'))
-    usuario_data = usuario_repo.get_by_id(professor_data.get('usuario_id')) if professor_data else None
+    class PaginateObj:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = max(1, (total + per_page - 1) // per_page)
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        
+        def iter_pages(self):
+            for i in range(1, self.pages + 1):
+                yield i
     
-    class TurmaObj:
-        def __init__(self, d):
-            self.id = d.get('id')
-            self.nome = d.get('nome', '')
-            self.codigo = d.get('codigo', '')
-    
-    class UsuarioObj:
-        def __init__(self, d):
-            self.nome = d.get('nome', '') if d else ''
-    
-    class ProfessorObj:
-        def __init__(self, d, usuario):
-            self.id = d.get('id') if d else None
-            self.usuario = usuario
-    
-    class AulaObj:
-        def __init__(self, d, turma, professor):
-            self.id = d.get('id')
-            self.materia = d.get('materia', '')
-            self.descricao = d.get('descricao', '')
-            self.turma_id = d.get('turma_id')
-            self.professor_id = d.get('professor_id')
-            self.data = d.get('data')
-            if isinstance(self.data, str):
-                try:
-                    self.data = datetime.strptime(self.data, '%Y-%m-%d').date()
-                except:
-                    pass
-            self.horario_inicio = d.get('horario_inicio')
-            if isinstance(self.horario_inicio, str):
-                try:
-                    self.horario_inicio = datetime.strptime(self.horario_inicio, '%H:%M:%S').time()
-                except:
-                    pass
-            self.horario_fim = d.get('horario_fim')
-            if isinstance(self.horario_fim, str):
-                try:
-                    self.horario_fim = datetime.strptime(self.horario_fim, '%H:%M:%S').time()
-                except:
-                    pass
-            self.recorrente = d.get('recorrente', False)
-            self.tipo_recorrencia = d.get('tipo_recorrencia')
-            self.dia_semana = d.get('dia_semana')
-            self.data_fim_recorrencia = d.get('data_fim_recorrencia')
-            self.aula_pai_id = d.get('aula_pai_id')
-            self.status = d.get('status', 'agendada')
-            self.criado_em = d.get('criado_em')
-            self.atualizado_em = d.get('atualizado_em')
-            self.turma = turma
-            self.professor = professor
-    
-    turma = TurmaObj(turma_data) if turma_data else TurmaObj({})
-    usuario = UsuarioObj(usuario_data)
-    professor = ProfessorObj(professor_data, usuario)
-    
-    return AulaObj(data, turma, professor)
+    return PaginateObj(page_items, page, per_page, total)
 
 
 def verificar_dia_letivo(data):
     """Verifica se um dia é letivo (não é feriado nem dia não letivo)."""
-    from app.repositories import DiaNaoLetivoRepository
+    from app.repositories.feriado_repository import DiaNaoLetivoRepository
     dia_repo = DiaNaoLetivoRepository()
     
-    if feriado_repo.is_feriado(data):
+    if _feriado_repo.is_feriado(data):
         return False
     if dia_repo.is_dia_nao_letivo(data):
         return False
@@ -145,47 +115,23 @@ def index():
     if data_inicio and data_fim:
         inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
         fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
-        aulas_raw = aula_repo.get_by_date_range(inicio, fim, turma_id)
+        aulas_raw = _aula_repo.get_by_date_range(inicio, fim, turma_id)
     elif turma_id:
-        aulas_raw = aula_repo.get_by_turma(turma_id)
+        aulas_raw = _aula_repo.get_by_turma(turma_id)
     else:
-        aulas_raw = aula_repo.get_all(order_by='-data')
+        aulas_raw = _aula_repo.get_all(order_by='-data')
     
     if busca:
         aulas_raw = [a for a in aulas_raw if busca.lower() in a.get('materia', '').lower()]
     
-    # Paginação manual
-    per_page = 20
-    total = len(aulas_raw)
-    start = (page - 1) * per_page
-    end = start + per_page
-    aulas_page = aulas_raw[start:end]
+    aulas_list = [AulaDTO(a, _repos) for a in aulas_raw]
+    aulas = _paginate(aulas_list, page)
     
-    aulas_obj = [_dict_to_aula_obj(a) for a in aulas_page]
-    
-    class PaginateObj:
-        def __init__(self, items, page, per_page, total):
-            self.items = items
-            self.page = page
-            self.per_page = per_page
-            self.total = total
-            self.pages = (total + per_page - 1) // per_page
-            self.has_prev = page > 1
-            self.has_next = page < self.pages
-            self.prev_num = page - 1
-            self.next_num = page + 1
-        
-        def iter_pages(self):
-            for i in range(1, self.pages + 1):
-                yield i
-    
-    aulas_paginadas = PaginateObj(aulas_obj, page, per_page, total)
-    
-    turmas_raw = turma_repo.get_active_turmas()
+    turmas_raw = _turma_repo.get_active_turmas()
     turmas = [type('Turma', (), {'id': t.get('id'), 'nome': t.get('nome'), 'codigo': t.get('codigo')})() for t in turmas_raw]
     
     return render_template('aulas/index.html', 
-        aulas=aulas_paginadas, 
+        aulas=aulas, 
         busca=busca, 
         turmas=turmas,
         turma_id=turma_id,
@@ -201,20 +147,20 @@ def novo():
     form = AulaForm()
     
     # Popular choices
-    turmas_raw = turma_repo.get_active_turmas()
+    turmas_raw = _turma_repo.get_active_turmas()
     form.turma_id.choices = [(t.get('id'), f'{t.get("nome")} ({t.get("codigo")})') for t in turmas_raw]
     
-    professores_raw = professor_repo.get_active_professors()
+    professores_raw = _professor_repo.get_active_professores()
     professor_choices = []
     for p in professores_raw:
-        usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+        usuario = _usuario_repo.get_by_id(p.get('usuario_id'))
         nome = usuario.get('nome', 'N/A') if usuario else 'N/A'
         professor_choices.append((p.get('id'), nome))
     form.professor_id.choices = professor_choices
     
     if form.validate_on_submit():
         # Verificar conflito de horário
-        if aula_repo.check_conflict(form.turma_id.data, form.data.data, 
+        if _aula_repo.check_conflict(form.turma_id.data, form.data.data, 
                                     str(form.horario_inicio.data), str(form.horario_fim.data)):
             flash('Já existe uma aula agendada neste horário para esta turma', 'error')
             return render_template('aulas/form.html', form=form, titulo='Nova Aula')
@@ -240,7 +186,7 @@ def novo():
             'status': 'agendada'
         }
         
-        aula_repo.create(data)
+        _aula_repo.create(data)
         
         flash('Aula criada com sucesso', 'success')
         return redirect(url_for('aulas.index'))
@@ -252,12 +198,12 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes da aula."""
-    aula_data = aula_repo.get_by_id(id)
+    aula_data = _aula_repo.get_by_id(id)
     if not aula_data:
         flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
-    aula = _dict_to_aula_obj(aula_data)
+    aula = AulaDTO(aula_data, _repos)
     return render_template('aulas/detalhe.html', aula=aula)
 
 
@@ -265,29 +211,29 @@ def detalhe(id):
 @login_required
 def editar(id):
     """Editar aula."""
-    aula_data = aula_repo.get_by_id(id)
+    aula_data = _aula_repo.get_by_id(id)
     if not aula_data:
         flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
     # Verificar permissão
     if current_user.tipo == 'professor':
-        professor_data = professor_repo.get_by_usuario_id(current_user.id)
+        professor_data = _professor_repo.get_by_usuario_id(current_user.id)
         if professor_data and aula_data.get('professor_id') != professor_data.get('id'):
             flash('Sem permissão para editar esta aula', 'error')
             return redirect(url_for('aulas.index'))
     
-    aula = _dict_to_aula_obj(aula_data)
+    aula = AulaDTO(aula_data, _repos)
     form = AulaForm(obj=aula)
     
     # Popular choices
-    turmas_raw = turma_repo.get_active_turmas()
+    turmas_raw = _turma_repo.get_active_turmas()
     form.turma_id.choices = [(t.get('id'), f'{t.get("nome")} ({t.get("codigo")})') for t in turmas_raw]
     
-    professores_raw = professor_repo.get_active_professores()
+    professores_raw = _professor_repo.get_active_professores()
     professor_choices = []
     for p in professores_raw:
-        usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+        usuario = _usuario_repo.get_by_id(p.get('usuario_id'))
         nome = usuario.get('nome', 'N/A') if usuario else 'N/A'
         professor_choices.append((p.get('id'), nome))
     form.professor_id.choices = professor_choices
@@ -303,7 +249,7 @@ def editar(id):
             'horario_fim': str(form.horario_fim.data)
         }
         
-        aula_repo.update(id, data)
+        _aula_repo.update(id, data)
         
         flash('Aula atualizada com sucesso', 'success')
         return redirect(url_for('aulas.detalhe', id=id))
@@ -315,19 +261,19 @@ def editar(id):
 @login_required
 def cancelar(id):
     """Cancelar aula."""
-    aula_data = aula_repo.get_by_id(id)
+    aula_data = _aula_repo.get_by_id(id)
     if not aula_data:
         flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
     # Verificar permissão
     if current_user.tipo == 'professor':
-        professor_data = professor_repo.get_by_usuario_id(current_user.id)
+        professor_data = _professor_repo.get_by_usuario_id(current_user.id)
         if professor_data and aula_data.get('professor_id') != professor_data.get('id'):
             flash('Sem permissão para cancelar esta aula', 'error')
             return redirect(url_for('aulas.index'))
     
-    aula_repo.cancel_aula(id)
+    _aula_repo.cancel_aula(id)
     
     flash('Aula cancelada com sucesso', 'success')
     return redirect(url_for('aulas.index'))
@@ -337,19 +283,19 @@ def cancelar(id):
 @login_required
 def realizar(id):
     """Marcar aula como realizada."""
-    aula_data = aula_repo.get_by_id(id)
+    aula_data = _aula_repo.get_by_id(id)
     if not aula_data:
         flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
     # Verificar permissão
     if current_user.tipo == 'professor':
-        professor_data = professor_repo.get_by_usuario_id(current_user.id)
+        professor_data = _professor_repo.get_by_usuario_id(current_user.id)
         if professor_data and aula_data.get('professor_id') != professor_data.get('id'):
             flash('Sem permissão', 'error')
             return redirect(url_for('aulas.index'))
     
-    aula_repo.realize_aula(id)
+    _aula_repo.realize_aula(id)
     
     flash('Aula marcada como realizada', 'success')
     return redirect(url_for('aulas.detalhe', id=id))
@@ -359,15 +305,15 @@ def realizar(id):
 @login_required
 def frequencia(id):
     """Gerenciar frequência da aula."""
-    aula_data = aula_repo.get_by_id(id)
+    aula_data = _aula_repo.get_by_id(id)
     if not aula_data:
         flash('Aula não encontrada', 'error')
         return redirect(url_for('aulas.index'))
     
-    aula = _dict_to_aula_obj(aula_data)
+    aula = AulaDTO(aula_data, _repos)
     
     if request.method == 'POST':
-        alunos = turma_repo.get_alunos(aula_data.get('turma_id'))
+        alunos = _turma_repo.get_alunos(aula_data.get('turma_id'))
         
         presencas = []
         for aluno in alunos:
@@ -380,7 +326,7 @@ def frequencia(id):
                 'justificativa': justificativa
             })
         
-        frequencia_repo.register_batch(id, presencas)
+        _frequencia_repo.register_batch(id, presencas)
         
         flash('Frequência registrada com sucesso', 'success')
         return redirect(url_for('aulas.detalhe', id=id))

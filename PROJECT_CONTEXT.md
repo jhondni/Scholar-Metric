@@ -1121,6 +1121,66 @@ O sistema suporta migração gradual:
 
 ## 📋 Changelog
 
+### Versão 2.3.1 (28/03/2026)
+
+#### ✅ Correção de Erros nos Templates (UndefinedError)
+
+**Problema Identificado:**
+Os templates esperavam métodos e atributos que existiam nos modelos SQLAlchemy,
+mas os objetos wrapper criados nos controllers não os possuíam após a migração
+para Supabase REST API.
+
+**Solução Aplicada:**
+Criado módulo DTO (Data Transfer Object) que fornece a mesma interface
+que os modelos SQLAlchemy, garantindo compatibilidade total com templates.
+
+**DTOs Criados:**
+- `app/dtos/base_dto.py` - Classe base com conversões de tipos
+- `app/dtos/aluno_dto.py` - AlunoDTO com `percentual_frequencia()` e `media_notas()`
+- `app/dtos/turma_dto.py` - TurmaDTO com `total_alunos()`, `get_aulas_por_periodo()`, `alunos`, `materias`
+- `app/dtos/professor_dto.py` - ProfessorDTO com `total_aulas()`, `usuario`, `turmas`, `disponibilidades`
+- `app/dtos/aula_dto.py` - AulaDTO com `turma`, `professor`, `frequencias`
+- `app/dtos/materia_dto.py` - MateriaDTO com proxy `professores.filter_by().all()`
+- `app/dtos/frequencia_dto.py` - FrequenciaDTO com `aluno`
+- `app/dtos/usuario_dto.py` - UsuarioDTO básico
+
+**Erros Corrigidos:**
+
+1. `UndefinedError: 'AlunoObj object' has no attribute 'percentual_frequencia'`
+   - Causa: Template `turmas/detalhe.html` chamava `aluno.percentual_frequencia(turma.id)`
+   - Solução: AlunoDTO implementa método `percentual_frequencia(turma_id)` que consulta Supabase
+
+2. `UndefinedError: 'dict object' has no attribute 'professores'`
+   - Causa: Template `turmas/detalhe.html` acessava `materia.professores.filter_by().all()`
+   - Solução: MateriaDTO usa `MateriaProfessoresProxy` que simula comportamento SQLAlchemy
+
+3. `UndefinedError: 'AlunoObj object' has no attribute 'media_notas'`
+   - Causa: Template `alunos/detalhe.html` chamava `aluno.media_notas()`
+   - Solução: AlunoDTO implementa método `media_notas(turma_id)` que consulta Supabase
+
+4. `UndefinedError: 'ProfessorObj object' has no attribute 'total_aulas'`
+   - Causa: Template `professores/detalhe.html` chamava `professor.total_aulas()`
+   - Solução: ProfessorDTO implementa método `total_aulas()` que conta aulas no Supabase
+
+5. `UndefinedError: 'AulaObj object' has no attribute 'frequencias'`
+   - Causa: Template `aulas/detalhe.html` acessava `aula.frequencias.count()`
+   - Solução: AulaDTO implementa property `frequencias` e template usa `if aula.frequencias`
+
+**Controllers Atualizados para Usar DTOs:**
+- `turmas_controller.py` - Usa TurmaDTO
+- `alunos_controller.py` - Usa AlunoDTO
+- `professores_controller.py` - Usa ProfessorDTO
+- `aulas_controller.py` - Usa AulaDTO
+
+**Templates Corrigidos:**
+- `aulas/detalhe.html` - `aula.frequencias.count()` → `aula.frequencias`
+
+**Padrão de Correção:**
+- DTOs encapsulam lógica de acesso a dados
+- Templates mantêm sintaxe original (compatibilidade total)
+- Repositórios são passados via dicionário para DTOs
+- Cache interno evita consultas repetidas
+
 ### Versão 2.3.0 (28/03/2026)
 
 #### ✅ Migração Completa para Supabase REST API

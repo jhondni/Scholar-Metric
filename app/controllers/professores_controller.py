@@ -1,4 +1,4 @@
-# app/controllers/professores_controller.py - Controller de Professores (Supabase)
+# app/controllers/professores_controller.py - Controller de Professores (Supabase + DTOs)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
@@ -8,13 +8,21 @@ from wtforms.validators import DataRequired, Length, Optional
 from datetime import datetime, time as time_class
 
 from app.repositories import ProfessorRepository, MateriaRepository, UsuarioRepository
+from app.dtos.professor_dto import ProfessorDTO
 
 professores_bp = Blueprint('professores', __name__, url_prefix='/professores')
 
-# Instâncias dos repositórios
-professor_repo = ProfessorRepository()
-materia_repo = MateriaRepository()
-usuario_repo = UsuarioRepository()
+# Instâncias dos repositórios (reutilizadas)
+_professor_repo = ProfessorRepository()
+_materia_repo = MateriaRepository()
+_usuario_repo = UsuarioRepository()
+
+# Dicionário de repositórios para DTOs
+_repos = {
+    'professor': _professor_repo,
+    'materia': _materia_repo,
+    'usuario': _usuario_repo
+}
 
 
 # ==================== Formulários ====================
@@ -38,39 +46,30 @@ class ProfessorForm(FlaskForm):
 
 # ==================== Funções Auxiliares ====================
 
-def _dict_to_professor_obj(data):
-    """Converte dicionário do Supabase em objeto compatível com templates."""
-    if not data:
-        return None
+def _paginate(items: list, page: int, per_page: int = 20):
+    """Cria objeto de paginação compatível com Flask-SQLAlchemy."""
+    total = len(items)
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = items[start:end]
     
-    # Buscar dados do usuário
-    usuario_data = usuario_repo.get_by_id(data.get('usuario_id'))
+    class PaginateObj:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = max(1, (total + per_page - 1) // per_page)
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        
+        def iter_pages(self):
+            for i in range(1, self.pages + 1):
+                yield i
     
-    class UsuarioObj:
-        def __init__(self, d):
-            self.id = d.get('id')
-            self.nome = d.get('nome', '')
-            self.email = d.get('email', '')
-            self.telefone = d.get('telefone', '')
-    
-    class ProfessorObj:
-        def __init__(self, d, usuario):
-            self.id = d.get('id')
-            self.usuario_id = d.get('usuario_id')
-            self.registro = d.get('registro', '')
-            self.especialidade = d.get('especialidade', '')
-            self.formacao = d.get('formacao', '')
-            self.cpf = d.get('cpf', '')
-            self.telefone = d.get('telefone', '')
-            self.endereco = d.get('endereco', '')
-            self.ativo = d.get('ativo', True)
-            self.criado_em = d.get('criado_em')
-            self.atualizado_em = d.get('atualizado_em')
-            self.usuario = usuario
-            self.materias = []  # Será preenchido quando necessário
-    
-    usuario = UsuarioObj(usuario_data) if usuario_data else UsuarioObj({})
-    return ProfessorObj(data, usuario)
+    return PaginateObj(page_items, page, per_page, total)
 
 
 # ==================== Rotas ====================
@@ -82,45 +81,23 @@ def index():
     page = request.args.get('page', 1, type=int)
     busca = request.args.get('busca', '')
     
-    professores_raw = professor_repo.get_all(order_by='registro')
+    professores_raw = _professor_repo.get_all(order_by='registro')
     
     if busca:
-        professores_raw = [p for p in professores_raw if busca.lower() in p.get('registro', '').lower()]
-        # Também buscar por nome do usuário
-        for p in professor_repo.get_all():
-            usuario = usuario_repo.get_by_id(p.get('usuario_id'))
-            if usuario and busca.lower() in usuario.get('nome', '').lower():
-                if p not in professores_raw:
-                    professores_raw.append(p)
+        professores_filtered = []
+        for p in professores_raw:
+            if busca.lower() in p.get('registro', '').lower():
+                professores_filtered.append(p)
+            else:
+                usuario = _usuario_repo.get_by_id(p.get('usuario_id'))
+                if usuario and busca.lower() in usuario.get('nome', '').lower():
+                    professores_filtered.append(p)
+        professores_raw = professores_filtered
     
-    # Paginação manual
-    per_page = 20
-    total = len(professores_raw)
-    start = (page - 1) * per_page
-    end = start + per_page
-    professores_page = professores_raw[start:end]
+    professores_list = [ProfessorDTO(p, _repos) for p in professores_raw]
+    professores = _paginate(professores_list, page)
     
-    professores_obj = [_dict_to_professor_obj(p) for p in professores_page]
-    
-    class PaginateObj:
-        def __init__(self, items, page, per_page, total):
-            self.items = items
-            self.page = page
-            self.per_page = per_page
-            self.total = total
-            self.pages = (total + per_page - 1) // per_page
-            self.has_prev = page > 1
-            self.has_next = page < self.pages
-            self.prev_num = page - 1
-            self.next_num = page + 1
-        
-        def iter_pages(self):
-            for i in range(1, self.pages + 1):
-                yield i
-    
-    professores_paginados = PaginateObj(professores_obj, page, per_page, total)
-    
-    return render_template('professores/index.html', professores=professores_paginados, busca=busca)
+    return render_template('professores/index.html', professores=professores, busca=busca)
 
 
 @professores_bp.route('/novo', methods=['GET', 'POST'])
@@ -134,7 +111,7 @@ def novo():
     form = ProfessorForm()
     
     if form.validate_on_submit():
-        if professor_repo.get_by_registro(form.registro.data):
+        if _professor_repo.get_by_registro(form.registro.data):
             flash('Registro já cadastrado', 'error')
             return render_template('professores/form.html', form=form, titulo='Novo Professor')
         
@@ -149,7 +126,7 @@ def novo():
             'ativo': form.ativo.data == '1'
         }
         
-        professor_repo.create(data)
+        _professor_repo.create(data)
         
         flash('Professor cadastrado com sucesso', 'success')
         return redirect(url_for('professores.index'))
@@ -161,16 +138,12 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes do professor."""
-    professor_data = professor_repo.get_by_id(id)
+    professor_data = _professor_repo.get_by_id(id)
     if not professor_data:
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = _dict_to_professor_obj(professor_data)
-    
-    # Buscar matérias do professor
-    professor.materias = professor_repo.get_materias(id)
-    
+    professor = ProfessorDTO(professor_data, _repos)
     return render_template('professores/detalhe.html', professor=professor)
 
 
@@ -182,12 +155,12 @@ def editar(id):
         flash('Sem permissão para editar professores', 'error')
         return redirect(url_for('professores.index'))
     
-    professor_data = professor_repo.get_by_id(id)
+    professor_data = _professor_repo.get_by_id(id)
     if not professor_data:
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = _dict_to_professor_obj(professor_data)
+    professor = ProfessorDTO(professor_data, _repos)
     form = ProfessorForm(obj=professor)
     
     if form.validate_on_submit():
@@ -200,7 +173,7 @@ def editar(id):
             'ativo': form.ativo.data == '1'
         }
         
-        professor_repo.update(id, data)
+        _professor_repo.update(id, data)
         
         flash('Professor atualizado com sucesso', 'success')
         return redirect(url_for('professores.detalhe', id=id))
@@ -216,7 +189,7 @@ def excluir(id):
         flash('Sem permissão para excluir professores', 'error')
         return redirect(url_for('professores.index'))
     
-    professor_repo.update(id, {'ativo': False})
+    _professor_repo.update(id, {'ativo': False})
     
     flash('Professor desativado com sucesso', 'success')
     return redirect(url_for('professores.index'))
@@ -231,11 +204,11 @@ def api_buscar():
     if len(termo) < 2:
         return jsonify([])
     
-    professores_raw = professor_repo.get_active_professors()
+    professores_raw = _professor_repo.get_active_professors()
     resultado = []
     
     for p in professores_raw:
-        usuario = usuario_repo.get_by_id(p.get('usuario_id'))
+        usuario = _usuario_repo.get_by_id(p.get('usuario_id'))
         if usuario and termo.lower() in usuario.get('nome', '').lower():
             resultado.append({
                 'id': p.get('id'),
@@ -258,7 +231,7 @@ def adicionar_disponibilidade(id):
         flash('Sem permissão', 'error')
         return redirect(url_for('professores.index'))
     
-    professor_data = professor_repo.get_by_id(id)
+    professor_data = _professor_repo.get_by_id(id)
     if not professor_data:
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
@@ -296,12 +269,12 @@ def materias(id):
         flash('Sem permissão para gerenciar matérias de professores', 'error')
         return redirect(url_for('professores.index'))
     
-    professor_data = professor_repo.get_by_id(id)
+    professor_data = _professor_repo.get_by_id(id)
     if not professor_data:
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
-    professor = _dict_to_professor_obj(professor_data)
+    professor = ProfessorDTO(professor_data, _repos)
     
     if request.method == 'POST':
         materia_ids = request.form.getlist('materias')
@@ -313,14 +286,12 @@ def materias(id):
         
         # Adicionar novas matérias
         for mid in materia_ids:
-            professor_repo.associate_materia(id, int(mid))
+            _professor_repo.associate_materia(id, int(mid))
         
         flash('Matérias do professor atualizadas com sucesso', 'success')
         return redirect(url_for('professores.detalhe', id=id))
     
-    materias_raw = materia_repo.get_active_materias()
-    professor.materias = professor_repo.get_materias(id)
-    
+    materias_raw = _materia_repo.get_active_materias()
     return render_template('professores/materias.html', professor=professor, materias=materias_raw)
 
 
@@ -333,7 +304,7 @@ def adicionar_materia(id):
     
     materia_id = request.json.get('materia_id')
     
-    if professor_repo.associate_materia(id, materia_id):
+    if _professor_repo.associate_materia(id, materia_id):
         return jsonify({'success': True, 'message': 'Matéria adicionada'})
     
     return jsonify({'error': 'Erro ao adicionar matéria'}), 400
@@ -346,7 +317,7 @@ def remover_materia(id, materia_id):
     if not current_user.tem_permissao(['diretora', 'coordenacao']):
         return jsonify({'error': 'Sem permissão'}), 403
     
-    if professor_repo.dissociate_materia(id, materia_id):
+    if _professor_repo.dissociate_materia(id, materia_id):
         return jsonify({'success': True, 'message': 'Matéria removida'})
     
     return jsonify({'error': 'Erro ao remover matéria'}), 400
