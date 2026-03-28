@@ -57,4 +57,80 @@
         {% endif %}
     </div>
 </div>
+
+<div class="card mt-3">
+    <div class="card-header">
+        <h3 class="card-title">Disponibilidade</h3>
+    </div>
+    <div class="card-body">
+        {% if professor.disponibilidades %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Dia da Semana</th><th>Início</th><th>Fim</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for disp in professor.disponibilidades %}
+                    <tr>
+                        <td>{{ disp.get_dia_label(disp.dia_semana) }}</td>
+                        <td>{{ disp.horario_inicio.strftime('%H:%M') }}</td>
+                        <td>{{ disp.horario_fim.strftime('%H:%M') }}</td>
+                        <td>
+                            <span class="badge badge-{% if disp.ativo %}success{% else %}danger{% endif %}">
+                                {% if disp.ativo %}Ativo{% else %}Inativo{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Nenhuma disponibilidade cadastrada. O professor pode lecionar em qualquer horário.</p>
+        {% endif %}
+        
+        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+        <button class="btn btn-sm btn-outline mt-2" data-modal="modalDisponibilidade">
+            <i class="fas fa-plus"></i> Adicionar Disponibilidade
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Adicionar Disponibilidade -->
+<div class="modal-overlay" id="modalDisponibilidade">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Adicionar Disponibilidade</h3>
+            <button class="modal-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form method="POST" action="{{ url_for('professores.adicionar_disponibilidade', id=professor.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label class="form-label">Dia da Semana</label>
+                    <select name="dia_semana" class="form-control" required>
+                        <option value="0">Segunda-feira</option>
+                        <option value="1">Terça-feira</option>
+                        <option value="2">Quarta-feira</option>
+                        <option value="3">Quinta-feira</option>
+                        <option value="4">Sexta-feira</option>
+                        <option value="5">Sábado</option>
+                        <option value="6">Domingo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Horário Início</label>
+                    <input type="time" name="horario_inicio" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Horário Fim</label>
+                    <input type="time" name="horario_fim" class="form-control" required>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" class="btn btn-outline modal-close-btn">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

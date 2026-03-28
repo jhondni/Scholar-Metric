@@ -162,3 +162,40 @@ def api_buscar():
         'nome': p.usuario.nome,
         'registro': p.registro
     } for p in professores])
+
+
+# ==================== Disponibilidade do Professor ====================
+
+from datetime import time as time_class
+
+@professores_bp.route('/<int:id>/adicionar-disponibilidade', methods=['POST'])
+@login_required
+def adicionar_disponibilidade(id):
+    """Adiciona disponibilidade ao professor."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        flash('Sem permissão', 'error')
+        return redirect(url_for('professores.index'))
+    
+    professor = Professor.query.get_or_404(id)
+    
+    dia_semana = request.form.get('dia_semana', type=int)
+    horario_inicio = request.form.get('horario_inicio')
+    horario_fim = request.form.get('horario_fim')
+    
+    if horario_inicio and horario_fim:
+        from app.models.especialidade import DisponibilidadeProfessor
+        
+        disp = DisponibilidadeProfessor(
+            professor_id=professor.id,
+            dia_semana=dia_semana,
+            horario_inicio=time_class.strptime(horario_inicio, '%H:%M'),
+            horario_fim=time_class.strptime(horario_fim, '%H:%M')
+        )
+        db.session.add(disp)
+        db.session.commit()
+        
+        flash('Disponibilidade adicionada com sucesso', 'success')
+    else:
+        flash('Preencha os horários', 'error')
+    
+    return redirect(url_for('professores.detalhe', id=professor.id))

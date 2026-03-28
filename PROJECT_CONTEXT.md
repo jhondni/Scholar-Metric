@@ -1,5 +1,40 @@
 # 📚 PROJECT_CONTEXT.md - Analitcs School
 
+---
+
+## 🆕 Atualizações Recentes (Março/2026)
+
+### ✅ Correções de Erros
+
+#### 1. NameError: name 'Nota' is not defined
+- **Problema**: Erro ao tentar usar a classe Nota nos modelos
+- **Solução**: Adicionado import `from app.models.nota import Nota` no modelo Aluno
+- **Arquivo modificado**: `app/models/aluno.py`
+
+#### 2. jinja2.exceptions.UndefinedError: 'csrf_token' is undefined
+- **Problema**: Formulários sem proteção CSRF
+- **Solução**: 
+  - Adicionado Flask-WTF CSRFProtect em `app/__init__.py`
+  -Token CSRF adicionado a todos os formuláriosPOST
+- **Arquivos modificados**: `app/__init__.py`, múltiplos templates
+
+---
+
+### ✅ Novas Funcionalidades
+
+#### 1. Disponibilidade de Professores (Etapa 3)
+- **Modelo novo**: `DisponibilidadeProfessor` em `app/models/especialidade.py`
+- **Campos**: dia_semana, horario_inicio, horario_fim
+- **Interface**: Página de detalhe do professor com modal para adicionar disponibilidade
+- **Arquivos novos**: Rota em `app/controllers/professores_controller.py`
+
+#### 2. Sistema de Frequência (Etapa 4)
+- **Modelo**: `Frequencia` em `app/models/frequencia.py` (já existia)
+- **Funcionalidade**: Lista todos os alunos da turma, permite marcar Presente/Ausente com justificativa
+- **Interface**: Página `aulas/frequencia.html` com formulário completo (@R南通 教育)
+
+---
+
 ## 📌 Visão Geral do Sistema
 
 ### Objetivo

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Matérias - Analitcs School{% endblock %}
+{% block page_title %}Matérias{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <a href="{{ url_for("materias.novo") }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nova Matéria
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if materias.items %}
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Carga Horária</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for materia in materias.items %}
+                    <tr>
+                        <td>{{ materia.codigo }}</td>
+                        <td>{{ materia.nome }}</td>
+                        <td>{{ materia.carga_horaria or "-" }}h</td>
+                        <td>
+                            <span class="badge badge-{% if materia.ativa %}success{% else %}danger{% endif %}">
+                                {% if materia.ativa %}Ativa{% else %}Inativa{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for("materias.detalhe", id=materia.id) }}" class="btn btn-icon btn-sm btn-outline">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for("materias.editar", id=materia.id) }}" class="btn btn-icon btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if materias.pages > 1 %}
+        <div class="pagination">
+            {% if materias.has_prev %}
+            <a href="{{ url_for("materias.index", page=materias.prev_num) }}" class="btn btn-sm btn-outline">Anterior</a>
+            {% endif %}
+            <span>Página {{ materias.page }} de {{ materias.pages }}</span>
+            {% if materias.has_next %}
+            <a href="{{ url_for("materias.index", page=materias.next_num) }}" class="btn btn-sm btn-outline">Próxima</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-muted">Nenhuma matéria cadastrada.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
