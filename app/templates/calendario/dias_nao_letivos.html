@@ -17,7 +17,7 @@
                 <tbody>
                     {% for d in dias %}
                     <tr>
-                        <td>{{ d.data_inicio.strftime('%d/%m/%Y') }} - {{ d.data_fim.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ d.data_inicio.strftime('%d/%m/%Y') if d.data_inicio else '-' }} - {{ d.data_fim.strftime('%d/%m/%Y') if d.data_fim else '-' }}</td>
                         <td>{{ d.nome }}</td>
                         <td><span class="badge badge-warning">{{ d.tipo|capitalize }}</span></td>
                         <td><button class="btn btn-icon btn-sm btn-danger" onclick="excluirDia({{ d.id }})"><i class="fas fa-trash"></i></button></td>

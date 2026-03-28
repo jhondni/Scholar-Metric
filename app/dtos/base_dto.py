@@ -20,13 +20,18 @@ class BaseDTO:
         """Converte string para date."""
         if value is None:
             return None
-        if isinstance(value, date):
+        if isinstance(value, date) and not isinstance(value, datetime):
             return value
+        if isinstance(value, datetime):
+            return value.date()
         if isinstance(value, str):
-            try:
-                return datetime.strptime(value, '%Y-%m-%d').date()
-            except ValueError:
-                return None
+            # Remover parte de tempo se existir
+            date_str = value.split('T')[0].split(' ')[0]
+            for fmt in ['%Y-%m-%d', '%d/%m/%Y']:
+                try:
+                    return datetime.strptime(date_str, fmt).date()
+                except ValueError:
+                    continue
         return None
     
     @staticmethod
@@ -37,9 +42,11 @@ class BaseDTO:
         if isinstance(value, time):
             return value
         if isinstance(value, str):
+            # Remover timezone e microsegundos se existirem
+            time_str = value.split('+')[0].split('-')[0].split('.')[0].strip()
             for fmt in ['%H:%M:%S', '%H:%M']:
                 try:
-                    return datetime.strptime(value, fmt).time()
+                    return datetime.strptime(time_str, fmt).time()
                 except ValueError:
                     continue
         return None
@@ -52,7 +59,13 @@ class BaseDTO:
         if isinstance(value, datetime):
             return value
         if isinstance(value, str):
-            for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d']:
+            for fmt in [
+                '%Y-%m-%dT%H:%M:%S.%f',
+                '%Y-%m-%dT%H:%M:%S',
+                '%Y-%m-%d %H:%M:%S.%f',
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%d'
+            ]:
                 try:
                     return datetime.strptime(value, fmt)
                 except ValueError:

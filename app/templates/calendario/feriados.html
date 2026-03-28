@@ -17,7 +17,7 @@
                 <tbody>
                     {% for f in feriados %}
                     <tr>
-                        <td>{{ f.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ f.data.strftime('%d/%m/%Y') if f.data else '-' }}</td>
                         <td>{{ f.nome }}</td>
                         <td><span class="badge badge-{% if f.tipo == 'nacional' %}primary{% elif f.tipo == 'estadual' %}info{% else %}warning{% endif %}">{{ f.tipo|capitalize }}</span></td>
                         <td><button class="btn btn-icon btn-sm btn-danger" onclick="excluirFeriado({{ f.id }})"><i class="fas fa-trash"></i></button></td>

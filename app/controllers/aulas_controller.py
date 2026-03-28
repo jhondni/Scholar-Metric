@@ -150,7 +150,7 @@ def novo():
     turmas_raw = _turma_repo.get_active_turmas()
     form.turma_id.choices = [(t.get('id'), f'{t.get("nome")} ({t.get("codigo")})') for t in turmas_raw]
     
-    professores_raw = _professor_repo.get_active_professores()
+    professores_raw = _professor_repo.get_active_professors()
     professor_choices = []
     for p in professores_raw:
         usuario = _usuario_repo.get_by_id(p.get('usuario_id'))
@@ -230,7 +230,7 @@ def editar(id):
     turmas_raw = _turma_repo.get_active_turmas()
     form.turma_id.choices = [(t.get('id'), f'{t.get("nome")} ({t.get("codigo")})') for t in turmas_raw]
     
-    professores_raw = _professor_repo.get_active_professores()
+    professores_raw = _professor_repo.get_active_professors()
     professor_choices = []
     for p in professores_raw:
         usuario = _usuario_repo.get_by_id(p.get('usuario_id'))

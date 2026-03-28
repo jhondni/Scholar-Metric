@@ -20,8 +20,8 @@
                 <tbody>
                     {% for aula in aulas.items %}
                     <tr>
-                        <td>{{ aula.data.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ aula.horario_inicio.strftime('%H:%M') }} - {{ aula.horario_fim.strftime('%H:%M') }}</td>
+                        <td>{{ aula.data.strftime('%d/%m/%Y') if aula.data else '-' }}</td>
+                        <td>{{ aula.horario_inicio.strftime('%H:%M') if aula.horario_inicio else '-' }} - {{ aula.horario_fim.strftime('%H:%M') if aula.horario_fim else '-' }}</td>
                         <td>{{ aula.materia }}</td>
                         <td>{{ aula.turma.nome }}</td>
                         <td>{{ aula.professor.usuario.nome }}</td>

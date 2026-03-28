@@ -6,7 +6,7 @@
 <div class="d-flex justify-between align-center mb-3">
     <div>
         <h3>{{ aula.materia }}</h3>
-        <p class="text-muted">{{ aula.data.strftime('%d/%m/%Y') }} - {{ aula.horario_inicio.strftime('%H:%M') }} às {{ aula.horario_fim.strftime('%H:%M') }}</p>
+        <p class="text-muted">{{ aula.data.strftime('%d/%m/%Y') if aula.data else '-' }} - {{ aula.horario_inicio.strftime('%H:%M') if aula.horario_inicio else '-' }} às {{ aula.horario_fim.strftime('%H:%M') if aula.horario_fim else '-' }}</p>
     </div>
     <a href="{{ url_for('aulas.detalhe', id=aula.id) }}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Voltar</a>
 </div>
@@ -22,7 +22,7 @@
                     <thead><tr><th>Nome</th><th>Presente</th><th>Justificativa</th></tr></thead>
                     <tbody>
                         {% for aluno in aula.turma.alunos %}
-                        {% set freq = aula.frequencias.filter_by(aluno_id=aluno.id).first() %}
+                        {% set freq = aula.frequencias | selectattr('aluno_id', 'equalto', aluno.id) | first %}
                         <tr>
                             <td>{{ aluno.nome }}</td>
                             <td>

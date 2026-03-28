@@ -9,6 +9,35 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 
+def _parse_datetime(value):
+    """
+    Converte string para datetime de forma segura.
+    
+    Args:
+        value: Valor a converter (str, datetime ou None)
+        
+    Returns:
+        datetime ou None
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        for fmt in [
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S.%f',
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d'
+        ]:
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+    return None
+
+
 class SupabaseUser(UserMixin):
     """
     Wrapper de usuário Supabase compatível com Flask-Login.
@@ -33,9 +62,12 @@ class SupabaseUser(UserMixin):
         self.telefone = data.get('telefone')
         self.tema = data.get('tema', 'light')
         self.ativo = data.get('ativo', True)
-        self.criado_em = data.get('criado_em')
-        self.atualizado_em = data.get('atualizado_em')
-        self.ultimo_acesso = data.get('ultimo_acesso')
+        
+        # Converter datas de string para datetime
+        self.criado_em = _parse_datetime(data.get('criado_em'))
+        self.atualizado_em = _parse_datetime(data.get('atualizado_em'))
+        self.ultimo_acesso = _parse_datetime(data.get('ultimo_acesso'))
+        
         self._data = data
     
     def get_id(self):

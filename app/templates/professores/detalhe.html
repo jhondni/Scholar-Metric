@@ -100,8 +100,8 @@
                     {% for disp in professor.disponibilidades %}
                     <tr>
                         <td>{{ disp.get_dia_label(disp.dia_semana) }}</td>
-                        <td>{{ disp.horario_inicio.strftime('%H:%M') }}</td>
-                        <td>{{ disp.horario_fim.strftime('%H:%M') }}</td>
+                        <td>{{ disp.horario_inicio.strftime('%H:%M') if disp.horario_inicio else '-' }}</td>
+                        <td>{{ disp.horario_fim.strftime('%H:%M') if disp.horario_fim else '-' }}</td>
                         <td>
                             <span class="badge badge-{% if disp.ativo %}success{% else %}danger{% endif %}">
                                 {% if disp.ativo %}Ativo{% else %}Inativo{% endif %}

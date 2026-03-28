@@ -279,8 +279,12 @@ def materias(id):
         flash('Matérias da turma atualizadas com sucesso', 'success')
         return redirect(url_for('turmas.detalhe', id=id))
     
+    from app.dtos.materia_dto import MateriaDTO
+    
     materias_raw = _materia_repo.get_active_materias()
-    return render_template('turmas/materias.html', turma=turma, materias=materias_raw)
+    materias = [MateriaDTO(m, _repos) for m in materias_raw]
+    
+    return render_template('turmas/materias.html', turma=turma, materias=materias)
 
 
 @turmas_bp.route('/<int:id>/materias/adicionar', methods=['POST'])

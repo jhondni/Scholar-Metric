@@ -56,7 +56,7 @@
     <div class="settings-body">
         <p><strong>E-mail:</strong> {{ current_user.email }}</p>
         <p><strong>Tipo:</strong> {{ current_user.tipo|capitalize }}</p>
-        <p><strong>Membro desde:</strong> {{ current_user.criado_em.strftime('%d/%m/%Y') }}</p>
+        <p><strong>Membro desde:</strong> {{ current_user.criado_em.strftime('%d/%m/%Y') if current_user.criado_em else '-' }}</p>
     </div>
 </div>
 {% endblock %}

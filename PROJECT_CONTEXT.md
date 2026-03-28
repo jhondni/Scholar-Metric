@@ -1121,6 +1121,51 @@ O sistema suporta migração gradual:
 
 ## 📋 Changelog
 
+### Versão 2.3.2 (28/03/2026)
+
+#### ✅ Correção de Erros Jinja2 e Controllers
+
+**Erros Corrigidos:**
+
+1. **`'str object' has no attribute 'strftime'`**
+   - Causa: Dados do Supabase retornam datas como strings, não datetime
+   - Solução: 
+     - `SupabaseUser` agora converte strings para datetime ao inicializar
+     - `BaseDTO.parse_date/parse_time/parse_datetime` melhorados para mais formatos
+     - Templates atualizados para verificar None antes de chamar strftime
+   - Arquivos: `supabase_auth.py`, `base_dto.py`, múltiplos templates
+
+2. **`'dict object' has no attribute 'professores'`**
+   - Causa: Template `turmas/materias.html` acessava `materia.professores` em dict puro
+   - Solução: Controller agora passa `MateriaDTO` em vez de dict raw
+   - Arquivo: `turmas_controller.py`
+
+3. **`MateriaProfessoresProxy` sem método `count()`**
+   - Causa: Template chamava `materia.professores.filter_by().count()`
+   - Solução: Adicionado método `count()` ao proxy
+   - Arquivo: `materia_dto.py`
+
+4. **`'ProfessorRepository' has no attribute 'get_active_professores'`**
+   - Causa: Controller chamava método em português, repositório tem em inglês
+   - Solução: Corrigido para `get_active_professors()`
+   - Arquivo: `aulas_controller.py`
+
+5. **Erro 500 na página de configurações**
+   - Causa: `current_user.criado_em` era string, não datetime
+   - Solução: `SupabaseUser` agora converte datas na inicialização
+   - Template atualizado para verificar None
+   - Arquivos: `supabase_auth.py`, `configuracoes/index.html`
+
+**Templates Atualizados:**
+- `aulas/detalhe.html` - strftime seguro
+- `aulas/index.html` - strftime seguro
+- `aulas/frequencia.html` - strftime seguro + filtro Jinja2
+- `dashboard/index.html` - strftime seguro
+- `configuracoes/index.html` - strftime seguro
+- `calendario/feriados.html` - strftime seguro
+- `calendario/dias_nao_letivos.html` - strftime seguro
+- `professores/detalhe.html` - strftime seguro
+
 ### Versão 2.3.1 (28/03/2026)
 
 #### ✅ Correção de Erros nos Templates (UndefinedError)

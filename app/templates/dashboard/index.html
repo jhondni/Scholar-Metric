@@ -77,8 +77,8 @@
                         <div class="recent-meta">{{ aula.turma.nome }} - {{ aula.professor.usuario.nome }}</div>
                     </div>
                     <div class="recent-time">
-                        {{ aula.data.strftime('%d/%m') }}<br>
-                        {{ aula.horario_inicio.strftime('%H:%M') }}
+                        {{ aula.data.strftime('%d/%m') if aula.data else '-' }}<br>
+                        {{ aula.horario_inicio.strftime('%H:%M') if aula.horario_inicio else '-' }}
                     </div>
                 </li>
                 {% endfor %}

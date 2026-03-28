@@ -20,8 +20,8 @@
 </div>
 
 <div class="grid grid-3 mb-3">
-    <div class="stat-card"><div class="stat-icon primary"><i class="fas fa-calendar"></i></div><div class="stat-content"><div class="stat-value">{{ aula.data.strftime('%d/%m/%Y') }}</div><div class="stat-label">Data</div></div></div>
-    <div class="stat-card"><div class="stat-icon success"><i class="fas fa-clock"></i></div><div class="stat-content"><div class="stat-value">{{ aula.horario_inicio.strftime('%H:%M') }} - {{ aula.horario_fim.strftime('%H:%M') }}</div><div class="stat-label">Horário</div></div></div>
+    <div class="stat-card"><div class="stat-icon primary"><i class="fas fa-calendar"></i></div><div class="stat-content"><div class="stat-value">{{ aula.data.strftime('%d/%m/%Y') if aula.data else '-' }}</div><div class="stat-label">Data</div></div></div>
+    <div class="stat-card"><div class="stat-icon success"><i class="fas fa-clock"></i></div><div class="stat-content"><div class="stat-value">{{ aula.horario_inicio.strftime('%H:%M') if aula.horario_inicio else '-' }} - {{ aula.horario_fim.strftime('%H:%M') if aula.horario_fim else '-' }}</div><div class="stat-label">Horário</div></div></div>
     <div class="stat-card"><div class="stat-icon info"><i class="fas fa-users"></i></div><div class="stat-content"><div class="stat-value">{{ aula.turma.nome }}</div><div class="stat-label">Turma</div></div></div>
 </div>
 

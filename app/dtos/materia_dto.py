@@ -112,6 +112,16 @@ class MateriaProfessoresProxy:
         self._load_professores()
         return self._professores[0] if self._professores else None
     
+    def count(self) -> int:
+        """
+        Retorna o número de professores.
+        
+        Returns:
+            int: Número de professores
+        """
+        self._load_professores()
+        return len(self._professores)
+    
     def __iter__(self):
         self._load_professores()
         return iter(self._professores)
