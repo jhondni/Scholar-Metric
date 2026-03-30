@@ -1,23 +1,30 @@
 # app/services/gerador_calendario.py - Serviço de Geração de Calendário Acadêmico
 # Módulo avançado para geração automática de calendário escolar
+#
+# ATUALIZADO: Usa Supabase REST API via repositórios (compatível com Vercel Serverless)
+# ANTERIOR: Usava SQLAlchemy ORM (incompatível com ambiente serverless)
 
 from datetime import date, time, timedelta
 from typing import List, Dict, Optional, Tuple
-from app import db
-from app.models.turma import Turma
-from app.models.aula import Aula
-from app.models.professor import Professor
-from app.models.materia import Materia
-from app.models.feriado import Feriado
-from app.models.dia_nao_letivo import DiaNaoLetivo
+
+from app.repositories import (
+    AulaRepository,
+    TurmaRepository,
+    ProfessorRepository,
+    FeriadoRepository,
+    DiaNaoLetivoRepository
+)
 
 
 class GeradorCalendarioAcademico:
     """
     Serviço avançado de geração de calendário acadêmico.
     
-    Implementa lógica heuristics para distribuição automática de aulas
+    Implementa lógica heurística para distribuição automática de aulas
     considerando professores, turmas, matérias e calendário acadêmico.
+    
+    Usa Supabase REST API via repositórios para compatibilidade com
+    ambiente serverless (Vercel).
     """
     
     # Duração padrão de cada aula em minutos
@@ -57,6 +64,14 @@ class GeradorCalendarioAcademico:
         self.aulas_criadas = []
         self.conflitos = []
         self.errors = []
+        
+        # Inicializar repositórios
+        self._aula_repo = AulaRepository()
+        self._turma_repo = TurmaRepository()
+        self._professor_repo = ProfessorRepository()
+        self._feriado_repo = FeriadoRepository()
+        self._dia_nao_letivo_repo = DiaNaoLetivoRepository()
+        
         self._definir_periodo_datas()
     
     def _definir_periodo_datas(self):
@@ -84,18 +99,23 @@ class GeradorCalendarioAcademico:
         Returns:
             bool: True se for dia letivo
         """
-        if Feriado.is_feriado(data):
-            return False
-        if DiaNaoLetivo.is_dia_nao_letivo(data):
-            return False
-        return True
+        try:
+            if self._feriado_repo.is_feriado(data):
+                return False
+            if self._dia_nao_letivo_repo.is_dia_nao_letivo(data):
+                return False
+            return True
+        except Exception as e:
+            print(f"[ERRO] verificar_dia_letivo: {e}")
+            return True  # Em caso de erro, considerar dia letivo
     
     def get_horarios_periodo(self, turno: str) -> List[Tuple[time, time]]:
         """Retorna os horários típicos para um turno."""
         return self.HORARIOS_TURNO.get(turno, self.HORARIOS_TURNO['manha'])
     
     def verificar_conflito_professor(self, professor_id: int, data: date, 
-                                     inicio: time, fim: time, turma_id_exclude: Optional[int] = None) -> bool:
+                                     inicio: time, fim: time, 
+                                     turma_id_exclude: Optional[int] = None) -> bool:
         """
         Verifica se o professor tem conflito de horário.
         
@@ -109,26 +129,31 @@ class GeradorCalendarioAcademico:
         Returns:
             bool: True se há conflito
         """
-        conflictos = Aula.query.filter(
-            Aula.professor_id == professor_id,
-            Aula.data == data,
-            Aula.status != 'cancelada',
-            db.or_(
-                db.and_(
-                    Aula.horario_inicio <= inicio,
-                    Aula.horario_fim > inicio
-                ),
-                db.and_(
-                    Aula.horario_inicio < fim,
-                    Aula.horario_fim >= fim
-                )
-            )
-        )
-        
-        if turma_id_exclude:
-            conflictos = conflictos.filter(Aula.turma_id != turma_id_exclude)
-        
-        return conflictos.first() is not None
+        try:
+            aulas_professor = self._aula_repo.get_by_professor(professor_id)
+            data_str = str(data)
+            inicio_str = str(inicio)
+            fim_str = str(fim)
+            
+            for aula in aulas_professor:
+                if aula.get('data') != data_str:
+                    continue
+                if aula.get('status') == 'cancelada':
+                    continue
+                if turma_id_exclude and aula.get('turma_id') == turma_id_exclude:
+                    continue
+                
+                aula_inicio = aula.get('horario_inicio', '')
+                aula_fim = aula.get('horario_fim', '')
+                
+                # Verificar sobreposição de horários
+                if aula_inicio < fim_str and aula_fim > inicio_str:
+                    return True
+            
+            return False
+        except Exception as e:
+            print(f"[ERRO] verificar_conflito_professor: {e}")
+            return False
     
     def verificar_conflito_turma(self, turma_id: int, data: date, 
                                  inicio: time, fim: time) -> bool:
@@ -144,23 +169,29 @@ class GeradorCalendarioAcademico:
         Returns:
             bool: True se há conflito
         """
-        conflicto = Aula.query.filter(
-            Aula.turma_id == turma_id,
-            Aula.data == data,
-            Aula.status != 'cancelada',
-            db.or_(
-                db.and_(
-                    Aula.horario_inicio <= inicio,
-                    Aula.horario_fim > inicio
-                ),
-                db.and_(
-                    Aula.horario_inicio < fim,
-                    Aula.horario_fim >= fim
-                )
-            )
-        ).first()
-        
-        return conflicto is not None
+        try:
+            aulas_turma = self._aula_repo.get_by_turma(turma_id)
+            data_str = str(data)
+            inicio_str = str(inicio)
+            fim_str = str(fim)
+            
+            for aula in aulas_turma:
+                if aula.get('data') != data_str:
+                    continue
+                if aula.get('status') == 'cancelada':
+                    continue
+                
+                aula_inicio = aula.get('horario_inicio', '')
+                aula_fim = aula.get('horario_fim', '')
+                
+                # Verificar sobreposição de horários
+                if aula_inicio < fim_str and aula_fim > inicio_str:
+                    return True
+            
+            return False
+        except Exception as e:
+            print(f"[ERRO] verificar_conflito_turma: {e}")
+            return False
     
     def verificar_conflito_alunos(self, turma_id: int, data: date, 
                                    inicio: time, fim: time, 
@@ -180,94 +211,128 @@ class GeradorCalendarioAcademico:
         """
         if not turmas_alunos or turma_id not in turmas_alunos:
             return False
+        
+        try:
+            alunos_turma = set(turmas_alunos.get(turma_id, []))
+            data_str = str(data)
+            inicio_str = str(inicio)
+            fim_str = str(fim)
             
-        alunos_turma = set(turmas_alunos.get(turma_id, []))
-        
-        aulas_conflito = Aula.query.filter(
-            Aula.turma_id != turma_id,
-            Aula.data == data,
-            Aula.status != 'cancelada',
-            db.or_(
-                db.and_(
-                    Aula.horario_inicio <= inicio,
-                    Aula.horario_fim > inicio
-                ),
-                db.and_(
-                    Aula.horario_inicio < fim,
-                    Aula.horario_fim >= fim
-                )
-            )
-        ).all()
-        
-        for aula in aulas_conflito:
-            alunos_aula = set(turmas_alunos.get(aula.turma_id, []))
-            if alunos_turma & alunos_aula:  # Interseção
-                return True
-        
-        return False
+            # Buscar todas as aulas do dia
+            aulas_dia = self._aula_repo.get_by_date(data)
+            
+            for aula in aulas_dia:
+                if aula.get('turma_id') == turma_id:
+                    continue
+                if aula.get('status') == 'cancelada':
+                    continue
+                
+                aula_inicio = aula.get('horario_inicio', '')
+                aula_fim = aula.get('horario_fim', '')
+                
+                # Verificar sobreposição de horários
+                if aula_inicio < fim_str and aula_fim > inicio_str:
+                    aula_turma_id = aula.get('turma_id')
+                    alunos_aula = set(turmas_alunos.get(aula_turma_id, []))
+                    if alunos_turma & alunos_aula:  # Interseção
+                        return True
+            
+            return False
+        except Exception as e:
+            print(f"[ERRO] verificar_conflito_alunos: {e}")
+            return False
     
-    def professor_pode_lecionar(self, professor: Professor, materia: Materia) -> bool:
-        """Verifica se o professor está habilitado para a matéria."""
-        return materia in professor.materias
+    def professor_pode_lecionar(self, professor_id: int, materia_id: int) -> bool:
+        """
+        Verifica se o professor está habilitado para a matéria.
+        
+        Args:
+            professor_id: ID do professor
+            materia_id: ID da matéria
+            
+        Returns:
+            bool: True se pode lecionar
+        """
+        try:
+            materias_professor = self._professor_repo.get_materias(professor_id)
+            return any(m.get('id') == materia_id for m in materias_professor)
+        except Exception as e:
+            print(f"[ERRO] professor_pode_lecionar: {e}")
+            return False
     
-    def encontrar_professor_disponivel(self, materia: Materia, data: date, 
-                                        horarios: List[Tuple[time, time]], 
-                                        turma_id: Optional[int] = None) -> Optional[Professor]:
+    def encontrar_professor_disponivel(self, materia_id: int, materia_nome: str,
+                                        data: date, horarios: List[Tuple[time, time]], 
+                                        turma_id: Optional[int] = None) -> Optional[Dict]:
         """
         Encontra um professor disponível para lecionar a matéria no horário.
         
         Usa abordagem gulosa: tenta encontrar primeiro professor disponível.
         
         Args:
-            materia: Matéria a ser lecionada
+            materia_id: ID da matéria a ser lecionada
+            materia_nome: Nome da matéria
             data: Data da aula
             horarios: Lista de horários disponíveis
             turma_id: ID da turma (para exclusões)
             
         Returns:
-            Professor disponível ou None
+            Dict do professor disponível ou None
         """
-        # Filtrar apenas professores ativos que podem lecionar esta matéria
-        professores_validos = [p for p in materia.professores if p.ativo]
-        
-        if not professores_validos:
-            return None
-        
-        # Tentar encontrar professor disponível
-        for professor in professores_validos:
-            disponivel = True
-            for h_inicio, h_fim in horarios:
-                if self.verificar_conflito_professor(professor.id, data, h_inicio, h_fim, turma_id):
-                    disponivel = False
-                    break
+        try:
+            # Buscar professores que podem lecionar esta matéria
+            professores_validos = self._professor_repo.get_by_materia(materia_id)
+            professores_ativos = [p for p in professores_validos if p.get('ativo', True)]
             
-            if disponivel:
-                return professor
-        
-        return None
+            if not professores_ativos:
+                return None
+            
+            # Tentar encontrar professor disponível
+            for professor in professores_ativos:
+                disponivel = True
+                for h_inicio, h_fim in horarios:
+                    if self.verificar_conflito_professor(
+                        professor.get('id'), data, h_inicio, h_fim, turma_id
+                    ):
+                        disponivel = False
+                        break
+                
+                if disponivel:
+                    return professor
+            
+            return None
+        except Exception as e:
+            print(f"[ERRO] encontrar_professor_disponivel: {e}")
+            return None
     
-    def distribuir_aulas_turma(self, turma: Turma, turmas_alunos: Dict[int, List[int]]) -> Dict:
+    def distribuir_aulas_turma(self, turma: Dict, turmas_alunos: Dict[int, List[int]]) -> Dict:
         """
         Distribui as aulas para uma turma respeitando todas as regras.
         
         Args:
-            turma: Turma a processar
+            turma: Dicionário com dados da turma
             turmas_alunos: Dicionário de alunos por turma
             
         Returns:
             Dict: Resultado da operação
         """
-        if not turma.ativa:
-            return {'success': False, 'error': f'Turma {turma.nome} está inativa'}
+        turma_id = turma.get('id')
+        turma_nome = turma.get('nome', 'Desconhecida')
         
-        if not turma.materias:
-            return {'success': False, 'error': f'Turma {turma.nome} não possui matérias cadastradas'}
+        if not turma.get('ativa', True):
+            return {'success': False, 'error': f'Turma {turma_nome} está inativa'}
         
-        if not turma.alunos:
-            return {'success': False, 'error': f'Turma {turma.nome} não possui alunos matriculados'}
+        # Buscar matérias da turma
+        materias_data = self._turma_repo.get_materias(turma_id)
+        if not materias_data:
+            return {'success': False, 'error': f'Turma {turma_nome} não possui matérias cadastradas'}
         
-        horarios = self.get_horarios_periodo(turma.turno)
-        aulas_criadas = 0
+        # Buscar alunos da turma
+        alunos = self._turma_repo.get_alunos(turma_id)
+        if not alunos:
+            return {'success': False, 'error': f'Turma {turma_nome} não possui alunos matriculados'}
+        
+        horarios = self.get_horarios_periodo(turma.get('turno', 'manha'))
+        aulas_criadas_count = 0
         
         # Processar cada dia do período
         data_atual = self.data_inicio
@@ -283,31 +348,38 @@ class GeradorCalendarioAcademico:
                 continue
             
             # Para cada matéria da turma
-            for materia_idx, materia in enumerate(turma.materias):
-                # Encontrar professor disponível para esta matéria neste dia
+            for materia_info in materias_data:
+                materia = materia_info.get('materias', {})
+                materia_id = materia.get('id')
+                materia_nome = materia.get('nome', 'N/A')
+                
+                if not materia_id:
+                    continue
+                
+                # Verificar se já existe aula desta matéria neste dia
+                aulas_existentes = self._aula_repo.get_by_date(data_atual, turma_id)
+                ja_existe = any(
+                    a.get('materia') == materia_nome 
+                    for a in aulas_existentes
+                    if a.get('status') != 'cancelada'
+                )
+                
+                if ja_existe:
+                    continue
+                
                 # Tentar cada horário até encontrar um disponível
-                for horario_idx, (h_inicio, h_fim) in enumerate(horarios):
-                    # Verificar se já não existe aula desta matéria neste dia/horário
-                    aula_existe = Aula.query.filter_by(
-                        turma_id=turma.id,
-                        materia=materia.nome,
-                        data=data_atual
-                    ).first()
-                    
-                    if aula_existe:
-                        continue
-                    
+                for h_inicio, h_fim in horarios:
                     # Verificar conflito de turma
-                    if self.verificar_conflito_turma(turma.id, data_atual, h_inicio, h_fim):
+                    if self.verificar_conflito_turma(turma_id, data_atual, h_inicio, h_fim):
                         continue
                     
                     # Verificar conflitos de alunos com outras turmas
-                    if self.verificar_conflito_alunos(turma.id, data_atual, h_inicio, h_fim, turmas_alunos):
+                    if self.verificar_conflito_alunos(turma_id, data_atual, h_inicio, h_fim, turmas_alunos):
                         continue
                     
                     # Encontrar professor disponível
                     professor = self.encontrar_professor_disponivel(
-                        materia, data_atual, [(h_inicio, h_fim)], turma.id
+                        materia_id, materia_nome, data_atual, [(h_inicio, h_fim)], turma_id
                     )
                     
                     if not professor:
@@ -315,23 +387,27 @@ class GeradorCalendarioAcademico:
                         continue
                     
                     # Verificar novamente conflito para o professor específico
-                    if self.verificar_conflito_professor(professor.id, data_atual, h_inicio, h_fim, turma.id):
+                    if self.verificar_conflito_professor(
+                        professor.get('id'), data_atual, h_inicio, h_fim, turma_id
+                    ):
                         continue
                     
-                    # Criar a aula
-                    aula = Aula(
-                        materia=materia.nome,
-                        turma_id=turma.id,
-                        professor_id=professor.id,
-                        data=data_atual,
-                        horario_inicio=h_inicio,
-                        horario_fim=h_fim,
-                        status='agendada'
-                    )
+                    # Criar a aula via Supabase
+                    aula_data = {
+                        'materia': materia_nome,
+                        'turma_id': turma_id,
+                        'professor_id': professor.get('id'),
+                        'data': str(data_atual),
+                        'horario_inicio': str(h_inicio),
+                        'horario_fim': str(h_fim),
+                        'status': 'agendada',
+                        'recorrente': False
+                    }
                     
-                    db.session.add(aula)
-                    self.aulas_criadas.append(aula)
-                    aulas_criadas += 1
+                    resultado = self._aula_repo.create(aula_data)
+                    if resultado:
+                        self.aulas_criadas.append(resultado)
+                        aulas_criadas_count += 1
                     
                     # Após criar uma aula, passar para o próximo dia para distribuir melhor
                     break
@@ -340,8 +416,8 @@ class GeradorCalendarioAcademico:
         
         return {
             'success': True, 
-            'aulas_criadas': aulas_criadas,
-            'turma': turma.nome
+            'aulas_criadas': aulas_criadas_count,
+            'turma': turma_nome
         }
     
     def gerar_para_todas_turmas(self, turma_ids: Optional[List[int]] = None) -> Dict:
@@ -352,43 +428,46 @@ class GeradorCalendarioAcademico:
             turma_ids: IDs específicos de turmas (None = todas ativas)
             
         Returns:
-            Dict: Resultado comtotal de aulas criadas
+            Dict: Resultado com total de aulas criadas
         """
-        # Buscar turmas
-        if turma_ids:
-            turmas = Turma.query.filter(Turma.id.in_(turma_ids), Turma.ativa == True).all()
-        else:
-            turmas = Turma.query.filter_by(ativa=True).all()
-        
-        if not turmas:
-            return {'success': False, 'error': 'Nenhuma turma ativa encontrada'}
-        
-        # Coletar alunos de cada turma para verificação de conflitos
-        turmas_alunos = {}
-        for turma in turmas:
-            turmas_alunos[turma.id] = [a.id for a in turma.alunos]
-        
-        total_aulas = 0
-        resultados = []
-        
-        for turma in turmas:
-            resultado = self.distribuir_aulas_turma(turma, turmas_alunos)
-            
-            if resultado['success']:
-                total_aulas += resultado['aulas_criadas']
-                resultados.append(f"{resultado['turma']}: {resultado['aulas_criadas']} aulas")
+        try:
+            # Buscar turmas
+            if turma_ids:
+                todas_turmas = self._turma_repo.get_active_turmas()
+                turmas = [t for t in todas_turmas if t.get('id') in turma_ids]
             else:
-                resultados.append(f"{resultado.get('turma', 'Desconhecido')}: {resultado.get('error', 'Erro')}")
-        
-        # Commit de todas as aulas criadas
-        if self.aulas_criadas:
-            db.session.commit()
-        
-        return {
-            'success': True,
-            'total_aulas': total_aulas,
-            'detalhes': resultados
-        }
+                turmas = self._turma_repo.get_active_turmas()
+            
+            if not turmas:
+                return {'success': False, 'error': 'Nenhuma turma ativa encontrada'}
+            
+            # Coletar alunos de cada turma para verificação de conflitos
+            turmas_alunos = {}
+            for turma in turmas:
+                turma_id = turma.get('id')
+                alunos = self._turma_repo.get_alunos(turma_id)
+                turmas_alunos[turma_id] = [a.get('id') for a in alunos]
+            
+            total_aulas = 0
+            resultados = []
+            
+            for turma in turmas:
+                resultado = self.distribuir_aulas_turma(turma, turmas_alunos)
+                
+                if resultado['success']:
+                    total_aulas += resultado['aulas_criadas']
+                    resultados.append(f"{resultado['turma']}: {resultado['aulas_criadas']} aulas")
+                else:
+                    resultados.append(f"{resultado.get('turma', 'Desconhecido')}: {resultado.get('error', 'Erro')}")
+            
+            return {
+                'success': True,
+                'total_aulas': total_aulas,
+                'detalhes': resultados
+            }
+        except Exception as e:
+            print(f"[ERRO] gerar_para_todas_turmas: {e}")
+            return {'success': False, 'error': str(e)}
     
     def gerar_para_periodo_customizado(self, turma_id: int, data_inicio: date, 
                                         data_fim: date) -> Dict:
@@ -403,17 +482,22 @@ class GeradorCalendarioAcademico:
         Returns:
             Dict: Resultado da geração
         """
-        self.data_inicio = data_inicio
-        self.data_fim = data_fim
-        
-        turma = Turma.query.get(turma_id)
-        if not turma:
-            return {'success': False, 'error': 'Turma não encontrada'}
-        
-        # Coletar alunos
-        turmas_alunos = {turma.id: [a.id for a in turma.alunos]}
-        
-        return self.distribuir_aulas_turma(turma, turmas_alunos)
+        try:
+            self.data_inicio = data_inicio
+            self.data_fim = data_fim
+            
+            turma = self._turma_repo.get_by_id(turma_id)
+            if not turma:
+                return {'success': False, 'error': 'Turma não encontrada'}
+            
+            # Coletar alunos
+            alunos = self._turma_repo.get_alunos(turma_id)
+            turmas_alunos = {turma_id: [a.get('id') for a in alunos]}
+            
+            return self.distribuir_aulas_turma(turma, turmas_alunos)
+        except Exception as e:
+            print(f"[ERRO] gerar_para_periodo_customizado: {e}")
+            return {'success': False, 'error': str(e)}
 
 
 def gerar_calendario_avancado(turma_id: Optional[int] = None, 
@@ -432,12 +516,16 @@ def gerar_calendario_avancado(turma_id: Optional[int] = None,
     Returns:
         Dict: Resultado da operação
     """
-    gerador = GeradorCalendarioAcademico(periodo)
-    
-    if data_inicio and data_fim:
-        gerador.data_inicio = data_inicio
-        gerador.data_fim = data_fim
-    elif turma_id:
-        return gerador.gerar_para_periodo_customizado(turma_id, gerador.data_inicio, gerador.data_fim)
-    
-    return gerador.gerar_para_todas_turmas()
+    try:
+        gerador = GeradorCalendarioAcademico(periodo)
+        
+        if data_inicio and data_fim:
+            gerador.data_inicio = data_inicio
+            gerador.data_fim = data_fim
+        elif turma_id:
+            return gerador.gerar_para_periodo_customizado(turma_id, gerador.data_inicio, gerador.data_fim)
+        
+        return gerador.gerar_para_todas_turmas()
+    except Exception as e:
+        print(f"[ERRO] gerar_calendario_avancado: {e}")
+        return {'success': False, 'error': str(e)}

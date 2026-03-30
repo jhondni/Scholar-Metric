@@ -1445,3 +1445,87 @@ que os modelos SQLAlchemy, garantindo compatibilidade total com templates.
 - Versão inicial do sistema
 - Estrutura MVC completa
 - Todos os módulos implementados
+
+---
+
+## 🛠️ Histórico de Correções
+
+### 🔧 Correção: 500 INTERNAL_SERVER_ERROR - FUNCTION_INVOCATION_FAILED (30/03/2026)
+
+#### 📍 O que foi alterado
+- **Arquivo**: `app/services/gerador_calendario.py` - Reescrito completamente
+- **Arquivo**: `app/__init__.py` - Adicionado logging estruturado
+
+#### ❓ Por que foi necessário
+O sistema apresentava erro `500: INTERNAL_SERVER_ERROR` com código `FUNCTION_INVOCATION_FAILED` ao ser acessado na Vercel. A serverless function não conseguia inicializar.
+
+#### ⚠️ Qual erro foi corrigido
+- **Erro original**: O arquivo `gerador_calendario.py` usava SQLAlchemy ORM diretamente (`Aula.query`, `Turma.query`, `db.session`)
+- **Problema**: Quando `turmas_controller.py` importava `gerador_calendario.py`, os imports de modelos SQLAlchemy falhavam se o PostgreSQL não estivesse acessível
+- **Resultado**: A inicialização da serverless function falhava com `FUNCTION_INVOCATION_FAILED`
+
+#### 🔧 Como foi corrigido
+1. **Reescrito `gerador_calendario.py`** para usar Supabase REST API via repositórios:
+   - Substituídos imports de `app.models.*` por imports de `app.repositories.*`
+   - Substituídas queries SQLAlchemy (`Aula.query.filter()`) por métodos de repositório (`self._aula_repo.get_by_professor()`)
+   - Substituído `db.session.add()` e `db.session.commit()` por `self._aula_repo.create()`
+   - Mantida toda a lógica de negócio original (verificação de conflitos, distribuição de aulas, etc.)
+
+2. **Melhorado `app/__init__.py`** com logging estruturado:
+   - Adicionada função `_log()` para logs com prefixo de ambiente (Serverless/Local)
+   - Adicionado try/except com stack trace na função `create_app()`
+   - Logs de cada etapa da inicialização para facilitar debugging
+
+#### 💡 Como evitar esse erro no futuro
+1. **Nunca usar SQLAlchemy ORM diretamente** em arquivos que serão importados em ambiente serverless
+2. **Sempre usar os repositórios Supabase** para acesso a dados
+3. **Testar com `FLASK_ENV=production`** localmente antes de fazer deploy
+4. **Verificar logs do Vercel** (Function Logs) para identificar erros de inicialização
+5. **Manter imports lazy** - usar imports dentro de funções quando possível
+
+#### 📊 Arquitetura Atualizada
+```
+ANTES (problemático):
+turmas_controller → gerador_calendario → SQLAlchemy Models → PostgreSQL (falha)
+
+DEPOIS (corrigido):
+turmas_controller → gerador_calendario → Supabase Repositories → Supabase REST API
+```
+
+---
+
+### 📋 Como Ativar Logs Detalhados
+
+#### No Vercel (Produção)
+1. Acesse o painel do Vercel
+2. Vá em **Deployments** → selecione o deployment
+3. Clique em **Functions** → veja os logs em tempo real
+4. Os logs agora incluem prefixo `[Serverless]` para fácil identificação
+
+#### Localmente (Desenvolvimento)
+```bash
+# Executar com logs detalhados
+FLASK_ENV=development flask run
+
+# Ou via Python diretamente
+python app.py
+```
+
+#### Identificar Stack Trace
+Os erros agora mostram:
+- `[ERRO]` - Erros gerais do sistema
+- `[ERRO][Serverless]` - Erros específicos do ambiente Vercel
+- `[OK]` - Operações bem-sucedidas
+- `[AVISO]` - Avisos que não impedem o funcionamento
+
+---
+
+### 🧪 Credenciais de Teste
+
+| Email | Senha | Tipo | Acesso |
+|-------|-------|------|--------|
+| joao@escola.com | 1234 | Diretora | Total |
+| coordenacao@escola.com | 1234 | Coordenação | Cadastros |
+| joao@prof.com | 1234 | Professor | Restrito |
+
+---
