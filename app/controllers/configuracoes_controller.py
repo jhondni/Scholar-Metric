@@ -79,3 +79,16 @@ def senha():
     usuario_repo.update_password(current_user.id, nova_senha)
     
     return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})
+
+
+@configuracoes_bp.route('/verificar-banco', methods=['GET'])
+@login_required
+def verificar_banco():
+    """Verifica se todas as tabelas necessárias existem no banco."""
+    if not current_user.tem_permissao(['diretora', 'coordenacao']):
+        return jsonify({'error': 'Sem permissão'}), 403
+    
+    from app.services.supabase_client import verify_required_tables
+    resultado = verify_required_tables()
+    
+    return jsonify(resultado)

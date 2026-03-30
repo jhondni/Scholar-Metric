@@ -177,15 +177,25 @@ class ProfessorDTO(BaseDTO):
                     'horario_inicio': self.parse_time(disp.get('horario_inicio')),
                     'horario_fim': self.parse_time(disp.get('horario_fim')),
                     'ativo': self.parse_bool(disp.get('ativo', True)),
-                    'get_dia_label': lambda ds: self._get_dia_label(ds)
+                    'get_dia_label': lambda obj, ds: self._get_dia_label(ds)
                 })()
                 self._disponibilidades.append(disp_obj)
         except Exception as e:
-            # Tabela pode não existir no Supabase
-            if 'PGRST205' in str(e) or 'Could not find the table' in str(e):
-                pass  # Tabela não existe ainda
+            error_msg = str(e)
+            
+            # Tratamento específico para erro de tabela não encontrada (PGRST205)
+            if 'PGRST205' in error_msg or 'Could not find the table' in error_msg:
+                print(f"[AVISO] ProfessorDTO.disponibilidades: Tabela 'disponibilidade_professores' "
+                      f"não encontrada no Supabase. Execute o script de migração: "
+                      f"database/migrations/001_create_disponibilidade_professores.sql")
+            # Tratamento para erro de conexão
+            elif 'Connection' in error_msg or 'timeout' in error_msg.lower():
+                print(f"[ERRO] ProfessorDTO.disponibilidades: Erro de conexão com Supabase. "
+                      f"Verifique a configuração SUPABASE_URL e SUPABASE_ANON_KEY")
+            # Outros erros
             else:
                 print(f"[ERRO] ProfessorDTO.disponibilidades: {e}")
+            
             self._disponibilidades = []
         
         return self._disponibilidades

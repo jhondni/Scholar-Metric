@@ -226,7 +226,7 @@ def api_buscar():
 @professores_bp.route('/<int:id>/adicionar-disponibilidade', methods=['POST'])
 @login_required
 def adicionar_disponibilidade(id):
-    """Adiciona disponibilidade ao professor."""
+    """Adiciona disponibilidade ao professor para múltiplos dias."""
     if not current_user.tem_permissao(['diretora', 'coordenacao']):
         flash('Sem permissão', 'error')
         return redirect(url_for('professores.index'))
@@ -236,23 +236,96 @@ def adicionar_disponibilidade(id):
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
-    dia_semana = request.form.get('dia_semana', type=int)
+    # Processar múltiplos dias selecionados
+    dias_semana = request.form.getlist('dias_semana')
     horario_inicio = request.form.get('horario_inicio')
     horario_fim = request.form.get('horario_fim')
+    
+    if not dias_semana:
+        flash('Selecione pelo menos um dia da semana', 'error')
+        return redirect(url_for('professores.detalhe', id=id))
     
     if horario_inicio and horario_fim:
         from app.services.supabase_client import get_supabase_client
         
-        client = get_supabase_client()
-        client.table('disponibilidade_professores').insert({
-            'professor_id': id,
-            'dia_semana': dia_semana,
-            'horario_inicio': horario_inicio,
-            'horario_fim': horario_fim,
-            'ativo': True
-        }).execute()
-        
-        flash('Disponibilidade adicionada com sucesso', 'success')
+        try:
+            client = get_supabase_client()
+            dias_criados = 0
+            dias_existentes = 0
+            erros = []
+            
+            # Dias da semana para exibir nomes nos logs
+            nomes_dias = {
+                '0': 'Segunda-feira',
+                '1': 'Terça-feira',
+                '2': 'Quarta-feira',
+                '3': 'Quinta-feira',
+                '4': 'Sexta-feira',
+                '5': 'Sábado',
+                '6': 'Domingo'
+            }
+            
+            for dia in dias_semana:
+                try:
+                    # Verificar se já existe para este professor, dia e horário
+                    existing = client.table('disponibilidade_professores') \
+                        .select('id') \
+                        .eq('professor_id', id) \
+                        .eq('dia_semana', int(dia)) \
+                        .eq('horario_inicio', horario_inicio) \
+                        .eq('horario_fim', horario_fim) \
+                        .execute()
+                    
+                    if existing.data:
+                        dias_existentes += 1
+                        continue
+                    
+                    client.table('disponibilidade_professores').insert({
+                        'professor_id': id,
+                        'dia_semana': int(dia),
+                        'horario_inicio': horario_inicio,
+                        'horario_fim': horario_fim,
+                        'ativo': True
+                    }).execute()
+                    dias_criados += 1
+                    
+                except Exception as day_error:
+                    error_msg = str(day_error)
+                    nome_dia = nomes_dias.get(dia, f'Dia {dia}')
+                    erros.append(f"{nome_dia}: {error_msg[:50]}")
+            
+            # Mensagens de resultado
+            if dias_criados > 0:
+                if dias_criados == 1:
+                    flash(f'Disponibilidade adicionada com sucesso', 'success')
+                else:
+                    flash(f'{dias_criados} disponibilidades adicionadas com sucesso', 'success')
+            
+            if dias_existentes > 0:
+                if dias_existentes == 1:
+                    flash('1 disponibilidade já existia e foi ignorada', 'info')
+                else:
+                    flash(f'{dias_existentes} disponibilidades já existiam e foram ignoradas', 'info')
+            
+            if erros:
+                flash(f'Erros ao adicionar: {"; ".join(erros)}', 'error')
+                
+        except Exception as e:
+            error_msg = str(e)
+            
+            # Tratamento específico para erro de tabela não encontrada (PGRST205)
+            if 'PGRST205' in error_msg or 'Could not find the table' in error_msg:
+                print(f"[ERRO] adicionar_disponibilidade: Tabela 'disponibilidade_professores' "
+                      f"não encontrada no Supabase.")
+                flash('Erro: Tabela de disponibilidade não encontrada no banco de dados. '
+                      'Execute o script de migração SQL primeiro.', 'error')
+            # Tratamento para erro de validação de horário
+            elif 'chk_horario_valido' in error_msg:
+                flash('Erro: O horário de fim deve ser maior que o horário de início.', 'error')
+            # Outros erros
+            else:
+                print(f"[ERRO] adicionar_disponibilidade: {e}")
+                flash(f'Erro ao adicionar disponibilidade: {error_msg[:100]}', 'error')
     else:
         flash('Preencha os horários', 'error')
     

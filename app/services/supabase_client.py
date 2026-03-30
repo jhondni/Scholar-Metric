@@ -76,3 +76,68 @@ def is_supabase_configured() -> bool:
     url = os.environ.get('SUPABASE_URL')
     key = os.environ.get('SUPABASE_ANON_KEY')
     return bool(url and key)
+
+
+def verify_required_tables() -> dict:
+    """
+    Verifica se todas as tabelas necessárias existem no Supabase.
+    
+    Returns:
+        dict: {'success': bool, 'missing_tables': list, 'message': str}
+    """
+    required_tables = [
+        'usuarios',
+        'alunos',
+        'professores',
+        'turmas',
+        'aulas',
+        'frequencias',
+        'notas',
+        'feriados',
+        'dias_nao_letivos',
+        'disponibilidade_professores',
+        'professores_turmas',
+        'alunos_turmas',
+        'professor_materias',
+        'turma_materias'
+    ]
+    
+    if not is_supabase_configured():
+        return {
+            'success': False,
+            'missing_tables': [],
+            'message': 'Supabase não configurado. Configure SUPABASE_URL e SUPABASE_ANON_KEY.'
+        }
+    
+    try:
+        client = get_supabase_client()
+        missing_tables = []
+        
+        for table in required_tables:
+            try:
+                # Tenta fazer uma consulta simples na tabela
+                client.table(table).select('id').limit(1).execute()
+            except Exception as e:
+                error_msg = str(e)
+                if 'PGRST205' in error_msg or 'Could not find the table' in error_msg:
+                    missing_tables.append(table)
+        
+        if missing_tables:
+            return {
+                'success': False,
+                'missing_tables': missing_tables,
+                'message': f'Tabelas não encontradas no Supabase: {", ".join(missing_tables)}. '
+                          f'Execute o script de migração SQL correspondente.'
+            }
+        
+        return {
+            'success': True,
+            'missing_tables': [],
+            'message': 'Todas as tabelas necessárias estão presentes no Supabase.'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'missing_tables': [],
+            'message': f'Erro ao verificar tabelas: {str(e)}'
+        }

@@ -134,6 +134,32 @@
   -Token CSRF adicionado a todos os formuláriosPOST
 - **Arquivos modificados**: `app/__init__.py`, múltiplos templates
 
+#### 3. TypeError: lambda() takes 1 positional argument but 2 were given (ProfessorDTO.disponibilidades)
+- **Problema**: Lambda em `get_dia_label` definida com 1 parâmetro, mas chamada como método de instância (recebe 2 argumentos: self implícito + ds)
+- **Causa**: `lambda ds: self._get_dia_label(ds)` na criação de objeto dinâmico
+- **Solução**: Alterado para `lambda obj, ds: self._get_dia_label(ds)` aceitando o primeiro argumento implícito do objeto
+- **Arquivo modificado**: `app/dtos/professor_dto.py` (linha 180)
+
+#### 4. Melhoria UX - Cadastro Múltiplo de Dias na Disponibilidade
+- **Problema**: Modal anterior permitia selecionar apenas 1 dia por vez, exigindo múltiplas submissões
+- **Solução**: Substituído `<select>` único por **checkboxes múltiplos** no modal
+- **Funcionalidade**:
+  - Seleção visual de múltiplos dias da semana simultaneamente
+  - Grid responsivo com checkboxes estilizados
+  - Feedback de dias já existentes (evita duplicatas)
+  - Mensagens de sucesso/erro detalhadas
+- **Arquivos modificados**:
+  - `app/templates/professores/detalhe.html` (modal com checkboxes)
+  - `app/controllers/professores_controller.py` (processamento de múltiplos dias)
+
+#### 5. Correção Schema - Tabela turma_materias
+- **Problema**: Tabela `turma_materias` existia no código mas não estava no `database/schema.sql`
+- **Solução**: Adicionada definição completa da tabela ao schema SQL
+- **Melhoria**: Empty-state modernizado na página de turma
+- **Arquivos modificados**:
+  - `database/schema.sql` (adição da tabela turma_materias)
+  - `app/templates/turmas/detalhe.html` (empty-state modernizado)
+
 ---
 
 ### ✅ Novas Funcionalidades
@@ -147,6 +173,115 @@
 #### 2. Sistema de Frequência (Etapa 4)
 - **Modelo**: `Frequencia` em `app/models/frequencia.py` (já existia)
 - **Funcionalidade**: Lista todos os alunos da turma, permite marcar Presente/Ausente com justificativa
+
+
+### ✅ Controle de Disponibilidade de Professores
+
+#### Estrutura da Tabela: disponibilidade_professores
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | SERIAL (PK) | Identificador único |
+| professor_id | INTEGER (FK) | Referência ao professor |
+| dia_semana | INTEGER | Dia da semana (0=Segunda, 6=Domingo) |
+| horario_inicio | TIME | Horário de início da disponibilidade |
+| horario_fim | TIME | Horário de fim da disponibilidade |
+| ativo | BOOLEAN | Se a disponibilidade está ativa |
+| criado_em | TIMESTAMP | Data de criação |
+| atualizado_em | TIMESTAMP | Data da última atualização |
+
+#### Relacionamentos
+- **Professor ↔ Disponibilidade**: 1:N
+  - Um professor pode ter múltiplas disponibilidades
+  - Cada disponibilidade pertence a um único professor
+
+#### Uso no Sistema
+- **Visualização**: Página de detalhe do professor mostra disponibilidades cadastradas
+- **Gerenciamento**: Botão "Adicionar Disponibilidade" na página do professor
+- **Cadastro múltiplo**: Modal permite selecionar vários dias da semana de uma vez (checkboxes)
+
+#### Comportamento do Modal de Disponibilidade
+- **Interface**: Grid de checkboxes com 7 dias (Seg a Dom)
+- **Seleção**: Pode marcar um ou mais dias simultaneamente
+- **Horário**: Define horário de início e fim para todos os dias selecionados
+- **Validação**: Verifica duplicatas antes de inserir (mesmo professor + dia + horário)
+- **Feedback**: Exibe quantos dias foram criados e quantos já existiam
+
+
+### ✅ Associação de Matérias às Turmas
+
+#### Funcionalidade
+Permite gerenciar quais matérias cada turma possui e quantas aulas por semana cada matéria terá.
+
+#### Estrutura da Tabela: turma_materias
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| turma_id | INTEGER (FK) | Referência à turma |
+| materia_id | INTEGER (FK) | Referência à matéria |
+| aulas_por_periodo | INTEGER | Quantidade de aulas por semana (padrão: 2) |
+| criado_em | TIMESTAMP | Data de criação |
+| atualizado_em | TIMESTAMP | Data da última atualização |
+
+#### Relacionamentos
+- **Turma ↔ Matéria**: N:N via `turma_materias`
+  - Uma turma pode ter múltiplas matérias
+  - Uma matéria pode estar em múltiplas turmas
+  - Cada associação define quantas aulas/semana
+
+#### Uso no Sistema
+- **Visualização**: Página de detalhe da turma mostra matérias cadastradas com aulas/semana
+- **Gerenciamento**: Botão "Gerenciar Matérias" na página da turma
+- **Empty State**: Quando não há matérias, exibe ilustração moderna com ação para adicionar
+- **Geração de Calendário**: As matérias são usadas na geração automática de aulas
+- **Análise**: Integrado com sistema de desempenho e professores
+
+#### Interface - Empty State Moderno
+Quando uma turma não possui matérias cadastradas:
+- **Ilustração**: Ícone circular com gradiente
+- **Mensagem**: "Nenhuma matéria cadastrada"
+- **Descrição**: Orientação sobre a importância das matérias para o cronograma
+- **Ação**: Botão "Adicionar Matérias" direto para a página de gerenciamento
+
+#### Rotas Disponíveis
+- `GET /turmas/<id>/materias` - Página de gerenciamento de matérias
+- `POST /turmas/<id>/materias` - Salvar matérias selecionadas
+- `POST /turmas/<id>/materias/adicionar` - API para adicionar matéria individual
+- `DELETE /turmas/<id>/materias/<materia_id>` - API para remover matéria
+- **Calendário**: O gerador de calendário pode usar as disponibilidades para evitar conflitos
+
+#### Script de Migração
+- **Arquivo**: `database/migrations/001_create_disponibilidade_professores.sql`
+- **Instruções**:
+  1. Acesse o painel do Supabase (https://supabase.com/dashboard)
+  2. Selecione o projeto
+  3. Vá em SQL Editor
+  4. Cole o conteúdo do arquivo e execute
+
+#### Verificação de Tabelas
+- **Endpoint**: `/configuracoes/verificar-banco`
+- **Função**: `verify_required_tables()` em `app/services/supabase_client.py`
+- **Retorna**: Status de todas as tabelas necessárias no Supabase
+
+
+### ✅ Correção do Erro PGRST205 (Março/2026)
+
+#### Problema Identificado
+- **Erro**: `PGRST205` - "Could not find the table 'public.disponibilidade_professores' in the schema cache"
+- **Causa**: A tabela `disponibilidade_professores` existia apenas como modelo SQLAlchemy, mas nunca foi criada no Supabase PostgreSQL
+- **Ocorrência**: Ao clicar em "Gerar Calendário" ou ao tentar adicionar disponibilidade a um professor
+
+#### Solução Implementada
+1. **Script SQL de Migração**: Criado `database/migrations/001_create_disponibilidade_professores.sql`
+2. **Schema Atualizado**: Adicionada a tabela ao `database/schema.sql`
+3. **Tratamento de Erros**: Melhorado no DTO (`professor_dto.py`) e Controller (`professores_controller.py`)
+4. **Verificação de Tabelas**: Adicionada função `verify_required_tables()` no cliente Supabase
+5. **Endpoint de Verificação**: Rota `/configuracoes/verificar-banco` para diagnosticar problemas
+
+#### Prevenção Futura
+- Sistema de verificação de tabelas no startup
+- Logs de erro mais claros com instruções de solução
+- Mensagens amigáveis ao usuário quando tabelas não existem
+
+---
 - **Interface**: Página `aulas/frequencia.html` com formulário completo (@R南通 教育)
 
 ---

@@ -134,32 +134,152 @@
         <div class="modal-body">
             <form method="POST" action="{{ url_for('professores.adicionar_disponibilidade', id=professor.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="form-group">
-                    <label class="form-label">Dia da Semana</label>
-                    <select name="dia_semana" class="form-control" required>
-                        <option value="0">Segunda-feira</option>
-                        <option value="1">Terça-feira</option>
-                        <option value="2">Quarta-feira</option>
-                        <option value="3">Quinta-feira</option>
-                        <option value="4">Sexta-feira</option>
-                        <option value="5">Sábado</option>
-                        <option value="6">Domingo</option>
-                    </select>
+                    <label class="form-label">Dias da Semana</label>
+                    <p class="text-muted mb-2">Selecione um ou mais dias para aplicar o mesmo horário</p>
+                    <div class="dias-semana-grid">
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="0" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Seg
+                            </span>
+                        </label>
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="1" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Ter
+                            </span>
+                        </label>
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="2" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Qua
+                            </span>
+                        </label>
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="3" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Qui
+                            </span>
+                        </label>
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="4" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Sex
+                            </span>
+                        </label>
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="5" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Sáb
+                            </span>
+                        </label>
+                        <label class="dia-checkbox">
+                            <input type="checkbox" name="dias_semana" value="6" class="dia-checkbox-input">
+                            <span class="dia-checkbox-label">
+                                <i class="fas fa-calendar-day"></i>
+                                Dom
+                            </span>
+                        </label>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Horário Início</label>
-                    <input type="time" name="horario_inicio" class="form-control" required>
+                
+                <div class="d-flex gap-3">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Horário Início</label>
+                        <input type="time" name="horario_inicio" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Horário Fim</label>
+                        <input type="time" name="horario_fim" class="form-control" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Horário Fim</label>
-                    <input type="time" name="horario_fim" class="form-control" required>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Salvar</button>
+                
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Disponibilidade
+                    </button>
                     <button type="button" class="btn btn-outline modal-close-btn">Cancelar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- Estilos para checkboxes de dias -->
+<style>
+.dias-semana-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.dia-checkbox {
+    cursor: pointer;
+    display: block;
+}
+
+.dia-checkbox-input {
+    display: none;
+}
+
+.dia-checkbox-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+    border: 2px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    background: var(--card-bg, #fff);
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.dia-checkbox-label i {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+    opacity: 0.5;
+}
+
+.dia-checkbox-input:checked + .dia-checkbox-label {
+    background: var(--primary-color, #4f46e5);
+    color: white;
+    border-color: var(--primary-color, #4f46e5);
+    transform: scale(1.05);
+}
+
+.dia-checkbox-input:checked + .dia-checkbox-label i {
+    opacity: 1;
+}
+
+.dia-checkbox-label:hover {
+    border-color: var(--primary-color, #4f46e5);
+    background: var(--bg-secondary, #f8fafc);
+}
+
+.dia-checkbox-input:checked + .dia-checkbox-label:hover {
+    background: var(--primary-dark, #4338ca);
+}
+
+[data-theme="dark"] .dia-checkbox-label {
+    background: var(--card-bg-dark, #1e293b);
+    border-color: var(--border-color-dark, #334155);
+    color: var(--text-color-dark, #e2e8f0);
+}
+
+[data-theme="dark"] .dia-checkbox-label:hover {
+    background: var(--bg-secondary-dark, #334155);
+}
+</style>
 {% endblock %}

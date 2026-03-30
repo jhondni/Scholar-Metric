@@ -101,10 +101,18 @@
             </table>
         </div>
         {% else %}
-        <div class="empty-state">
-            <i class="fas fa-book empty-state-icon"></i>
+        <!-- Empty State Moderno para Matérias -->
+        <div class="empty-state-modern">
+            <div class="empty-state-illustration">
+                <div class="empty-state-icon-circle">
+                    <i class="fas fa-book-open"></i>
+                </div>
+            </div>
             <h4 class="empty-state-title">Nenhuma matéria cadastrada</h4>
-            <p class="empty-state-text">Adicione matérias a esta turma para poder gerar o calendário.</p>
+            <p class="empty-state-description">
+                Adicione matérias a esta turma para começar a organizar o cronograma escolar.
+                As matérias são essenciais para gerar o calendário de aulas automaticamente.
+            </p>
             {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
             <a href="{{ url_for('turmas.materias', id=turma.id) }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Adicionar Matérias
@@ -114,6 +122,66 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Estilos para Empty State Moderno -->
+<style>
+.empty-state-modern {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.empty-state-illustration {
+    margin-bottom: 1.5rem;
+}
+
+.empty-state-icon-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color, #4f46e5) 0%, var(--primary-dark, #7c3aed) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 40px rgba(79, 70, 229, 0.3);
+}
+
+.empty-state-icon-circle i {
+    font-size: 2.5rem;
+    color: white;
+    opacity: 0.9;
+}
+
+.empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+    margin-bottom: 0.75rem;
+}
+
+.empty-state-description {
+    font-size: 0.95rem;
+    color: var(--text-muted, #64748b);
+    max-width: 400px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+[data-theme="dark"] .empty-state-title {
+    color: var(--text-color-dark, #f1f5f9);
+}
+
+[data-theme="dark"] .empty-state-description {
+    color: var(--text-muted-dark, #94a3b8);
+}
+
+[data-theme="dark"] .empty-state-icon-circle {
+    background: linear-gradient(135deg, var(--primary-color, #6366f1) 0%, var(--primary-dark, #8b5cf6) 100%);
+}
+</style>
 
 <!-- Botão de Gerar Calendário -->
 {% if current_user.tem_permissao(['diretora', 'coordenacao']) and turma.materias %}

@@ -155,6 +155,25 @@ CREATE TABLE IF NOT EXISTS dias_nao_letivos (
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabela de Disponibilidade de Professores
+-- Define os dias e horários disponíveis de cada professor para lecionar
+CREATE TABLE IF NOT EXISTS disponibilidade_professores (
+    id SERIAL PRIMARY KEY,
+    professor_id INTEGER NOT NULL REFERENCES professores(id) ON DELETE CASCADE,
+    dia_semana INTEGER NOT NULL CHECK (dia_semana >= 0 AND dia_semana <= 6),
+    horario_inicio TIME NOT NULL,
+    horario_fim TIME NOT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Constraint: horário de fim deve ser maior que horário de início
+    CONSTRAINT chk_horario_valido CHECK (horario_fim > horario_inicio),
+    
+    -- Constraint: evitar duplicatas para mesmo professor, dia e horário
+    CONSTRAINT uq_professor_dia_horario UNIQUE (professor_id, dia_semana, horario_inicio, horario_fim)
+);
+
 -- Tabela de Associação: Alunos <-> Turmas
 CREATE TABLE IF NOT EXISTS alunos_turmas (
     aluno_id INTEGER NOT NULL REFERENCES alunos(id),
@@ -171,6 +190,17 @@ CREATE TABLE IF NOT EXISTS professores_turmas (
     PRIMARY KEY(professor_id, turma_id)
 );
 
+-- Tabela de Associação: Turmas <-> Matérias
+-- Define quais matérias cada turma tem e quantas aulas por período (semana)
+CREATE TABLE IF NOT EXISTS turma_materias (
+    turma_id INTEGER NOT NULL REFERENCES turmas(id) ON DELETE CASCADE,
+    materia_id INTEGER NOT NULL REFERENCES materias(id) ON DELETE CASCADE,
+    aulas_por_periodo INTEGER DEFAULT 2,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(turma_id, materia_id)
+);
+
 -- Índices para performance
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
 CREATE INDEX IF NOT EXISTS idx_alunos_matricula ON alunos(matricula);
@@ -185,6 +215,11 @@ CREATE INDEX IF NOT EXISTS idx_notas_aluno ON notas(aluno_id);
 CREATE INDEX IF NOT EXISTS idx_notas_turma ON notas(turma_id);
 CREATE INDEX IF NOT EXISTS idx_feriodos_data ON feriados(data);
 CREATE INDEX IF NOT EXISTS idx_dias_nao_letivos_periodo ON dias_nao_letivos(data_inicio, data_fim);
+CREATE INDEX IF NOT EXISTS idx_disp_professor_id ON disponibilidade_professores(professor_id);
+CREATE INDEX IF NOT EXISTS idx_disp_dia_semana ON disponibilidade_professores(dia_semana);
+CREATE INDEX IF NOT EXISTS idx_disp_ativo ON disponibilidade_professores(ativo);
+CREATE INDEX IF NOT EXISTS idx_turma_materias_turma ON turma_materias(turma_id);
+CREATE INDEX IF NOT EXISTS idx_turma_materias_materia ON turma_materias(materia_id);
 
 -- Comentários nas tabelas
 COMMENT ON TABLE usuarios IS 'Tabela de usuários do sistema para autenticação';
@@ -197,3 +232,7 @@ COMMENT ON TABLE notas IS 'Tabela de notas e avaliações';
 COMMENT ON TABLE arquivos IS 'Tabela de arquivos/materiais didáticos';
 COMMENT ON TABLE feriados IS 'Tabela de feriados (nacionais, estaduais, municipais)';
 COMMENT ON TABLE dias_nao_letivos IS 'Tabela de dias não letivos (recessos, eventos)';
+COMMENT ON TABLE disponibilidade_professores IS 'Armazena os dias e horários disponíveis de cada professor para lecionar';
+COMMENT ON COLUMN disponibilidade_professores.dia_semana IS 'Dia da semana (0=Segunda, 1=Terça, 2=Quarta, 3=Quinta, 4=Sexta, 5=Sábado, 6=Domingo)';
+COMMENT ON TABLE turma_materias IS 'Associação entre turmas e matérias com quantidade de aulas por período';
+COMMENT ON COLUMN turma_materias.aulas_por_periodo IS 'Quantidade de aulas da matéria por período (semana)';
