@@ -160,6 +160,31 @@
   - `database/schema.sql` (adição da tabela turma_materias)
   - `app/templates/turmas/detalhe.html` (empty-state modernizado)
 
+#### 6. Correção Schema - Tabelas materias e professor_materias
+- **Problema**: Tabelas `materias` e `professor_materias` não existiam no `database/schema.sql`, causando erro de FK em `turma_materias`
+- **Solução**: Adicionadas definições completas das tabelas ao schema SQL
+- **Estrutura criada**:
+  - `materias`: id, nome, codigo, descricao, carga_horaria, ativa
+  - `professor_materias`: professor_id, materia_id (chave composta)
+- **Arquivos modificados**:
+  - `database/schema.sql` (adição das tabelas)
+
+#### 7. Correção BaseDTO - Método __eq__ para comparação de objetos
+- **Problema**: Comparação `{% if materia in turma.materias %}` no template não funcionava porque DTOs comparavam referências, não IDs
+- **Solução**: Adicionados métodos `__eq__` e `__hash__` ao `BaseDTO` para comparar objetos pelo ID
+- **Arquivos modificados**:
+  - `app/dtos/base_dto.py` (adição de __eq__ e __hash__)
+
+#### 8. Correção Supabase - Coluna aulas_por_periodo ausente
+- **Problema**: `ERROR: 42703: column "aulas_por_periodo" of relation "turma_materias" does not exist`
+- **Causa**: Tabela `turma_materias` criada no Supabase sem a coluna `aulas_por_periodo`
+- **Solução SQL**:
+  ```sql
+  ALTER TABLE turma_materias 
+  ADD COLUMN IF NOT EXISTS aulas_por_periodo INTEGER DEFAULT 2;
+  ```
+- **Impacto**: Essa coluna é usada para definir quantas aulas por semana cada matéria tem na turma
+
 ---
 
 ### ✅ Novas Funcionalidades

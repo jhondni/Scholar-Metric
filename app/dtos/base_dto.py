@@ -15,6 +15,29 @@ class BaseDTO:
     Todos os DTOs herdam desta classe.
     """
     
+    def __eq__(self, other):
+        """
+        Compara dois DTOs pelo ID.
+        
+        Args:
+            other: Outro objeto para comparar
+            
+        Returns:
+            bool: True se os IDs são iguais
+        """
+        if not isinstance(other, self.__class__):
+            return False
+        return getattr(self, 'id', None) == getattr(other, 'id', None)
+    
+    def __hash__(self):
+        """
+        Retorna hash baseado no ID para uso em sets e dicts.
+        
+        Returns:
+            int: Hash do objeto
+        """
+        return hash(getattr(self, 'id', None))
+    
     @staticmethod
     def parse_date(value):
         """Converte string para date."""
