@@ -89,14 +89,17 @@ def api_alunos_risco():
         nota_stats = nota_repo.get_aluno_stats(aluno_id)
         media = nota_stats.get('media', 0.0)
         
-        # Calcular risco
+        # Calcular risco (frequência < 80% = risco alto)
         risco = 'baixo'
-        if freq < 75 or media < 5:
+        if freq < 80:
             risco = 'alto'
-        elif freq < 85 or media < 7:
+        elif freq < 85 and media < 7:
             risco = 'medio'
+        elif freq < 85:
+            risco = 'baixo'
         
-        if risco != 'baixo':
+        # Apenas alunos com frequência < 80% aparecem na lista de risco
+        if freq < 80:
             alunos_risco.append({
                 'id': aluno_id,
                 'nome': aluno.get('nome', ''),
@@ -106,8 +109,8 @@ def api_alunos_risco():
                 'risco': risco
             })
     
-    # Ordenar por risco (alto primeiro)
-    alunos_risco.sort(key=lambda x: 0 if x['risco'] == 'alto' else 1)
+    # Ordenar por frequência (menor primeiro)
+    alunos_risco.sort(key=lambda x: x['frequencia'])
     
     return jsonify(alunos_risco)
 

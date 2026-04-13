@@ -31,27 +31,25 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Matérias</h3></div>
+    <div class="card-header"><h3 class="card-title">Turmas</h3></div>
     <div class="card-body">
         {% if materias_do_aluno %}
         <div class="table-container">
             <table class="table">
-                <thead><tr><th>Código</th><th>Matéria</th><th>Professor</th><th>Frequência</th><th>Média</th></tr></thead>
+                <thead><tr><th>Código</th><th>Frequência</th><th>Média</th></tr></thead>
                 <tbody>
                     {% for materia in materias_do_aluno %}
                     <tr>
                         <td>{{ materia.codigo }}</td>
-                        <td>{{ materia.materia_nome }}</td>
-                        <td>{{ materia.professor_nome }}</td>
                         <td>{{ "%.1f"|format(materia.frequencia) }}%</td>
-                        <td>{{ "%.1f"|format(materia.media) }}</td>
+                        <td>{% if materia.media is not none %}{{ "%.1f"|format(materia.media) }}{% else %}—{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         {% else %}
-        <p class="text-muted">Aluno não está matriculado em nenhuma matéria.</p>
+        <p class="text-muted">Aluno não está matriculado em nenhuma turma.</p>
         {% endif %}
     </div>
 </div>

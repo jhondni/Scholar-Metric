@@ -233,30 +233,46 @@ def detalhe(id):
             else:
                 dados['media'] = 0
     
-    # Buscar matérias do aluno (para aba Turmas)
-    from app.repositories import ProfessorRepository
+    # Buscar turmas e matérias do aluno (para aba Turmas)
+    from app.repositories import ProfessorRepository, TurmaRepository, NotaRepository
     professor_repo = ProfessorRepository()
+    turma_repo = TurmaRepository()
+    nota_repo = NotaRepository()
     
-    # Criar DTO do aluno antes de usar (necessário para calcular frequência)
+    # Criar DTO do aluno antes de usar
     aluno = AlunoDTO(aluno_data, _repos)
     
+    # Buscar turmas do aluno
+    aluno_turmas = _aluno_repo.get_turmas(id)
     materias_do_aluno = []
     ano_atual = date.today().year
     
-    if ano_atual in notas_por_ano:
-        for materia_id, dados in notas_por_ano[ano_atual].items():
-            materia = materia_repo.get_by_id(materia_id)
-            if materia:
-                profes = professor_repo.get_by_materia(materia_id)
-                professor_nome = profes[0].get('nome', 'Não atribuído') if profes else 'Não atribuído'
-                
-                materias_do_aluno.append({
-                    'codigo': materia.get('codigo', ''),
-                    'materia_nome': dados['materia_nome'],
-                    'professor_nome': professor_nome,
-                    'media': dados.get('media', 0),
-                    'frequencia': aluno.percentual_frequencia()
-                })
+    for tur in aluno_turmas:
+        turma_id = tur.get('id')
+        turmas_materias = turma_repo.get_materias(turma_id)
+        
+        for mat in turmas_materias:
+            materia_id = mat.get('id')
+            materia_codigo = mat.get('codigo', '')
+            
+            # Buscar notas do aluno nesta matéria
+            notas_materia = nota_repo.get_by_aluno_materia(id, materia_id, ano_atual)
+            
+            # Calcular média
+            if notas_materia:
+                valores = [n.get('valor', 0) for n in notas_materia]
+                media = sum(valores) / len(valores)
+            else:
+                media = None
+            
+            # Frequência (geral do aluno)
+            frequencia = aluno.percentual_frequencia()
+            
+            materias_do_aluno.append({
+                'codigo': materia_codigo,
+                'media': media,
+                'frequencia': frequencia
+            })
     
     return render_template('alunos/detalhe.html', aluno=aluno, notas_por_ano=notas_por_ano, materias_do_aluno=materias_do_aluno)
 

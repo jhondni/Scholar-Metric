@@ -2,7 +2,120 @@
 
 ---
 
-## 🔄 Histórico de Alterações
+### 📅 13/04/2026 - Correção: Lista de Risco de Evasão
+
+#### Problema:
+A lista de "Alunos em Risco de Evasão" incluyía alunos com frequência >= 80%.
+
+#### Solução Aplicada:
+
+**Controller atualizado** (`analise_controller.py`):
+
+```python
+# Antes (incorreto):
+risco = 'baixo'
+if freq < 75 or media < 5:
+    risco = 'alto'
+elif freq < 85 or media < 7:
+    risco = 'medio'
+
+# Depois (correto):
+risco = 'baixo'
+if freq < 80:
+    risco = 'alto'
+# Apenas alunos com frequência < 80% aparecem
+if freq < 80:
+    alunos_risco.append(...)
+# Ordenar por frequência (menor primeiro)
+alunos_risco.sort(key=lambda x: x['frequencia'])
+```
+
+#### Nova Lógica:
+- Frequência < 80% → risco alto (aparece na lista)
+- Frequência >= 80% → NÃO aparece
+- Ordenado do menor para o maior
+
+#### Validação:
+- ✅ Código compila corretamente
+
+---
+
+### 📅 13/04/2026 - Correção: Exibir Todas as Matérias da Turma
+
+#### Problema:
+A aba "Turmas" só exibia matérias que tinham notas cadastradas.
+
+#### Solução Aplicada:
+
+**1. novo método em `AlunoRepository`:**
+```python
+def get_turmas(self, aluno_id: int) -> List[Dict]:
+    """Busca turmas de um aluno específico."""
+    aluno = Aluno.query.get(aluno_id)
+    if aluno:
+        return [t.to_dict() for t in aluno.turmas]
+    return []
+```
+
+**2. Controller atualizado:**
+- Busca turmas do aluno via `get_turmas()`
+- Para cada turma, busca todas as matérias via `get_materias()`
+- Calcula média do aluno na matéria específica
+
+**3. Template atualizado:**
+- Exibe "—" quando média for `None`
+
+#### Validação:
+- ✅ Código compila corretamente
+
+---
+
+### 📅 13/04/2026 - Correção UI: Aba Turmas do Aluno
+
+#### Problema:
+A aba "Turmas" do aluno estava com colunas desnecessárias.
+
+#### Solução Aplicada:
+
+**Template atualizado** (`detalhe.html`):
+- Título: "Matérias" → "Turmas"
+- Colunas finais: Código, Frequência, Média
+- Mensagem vazia atualizada para "turma"
+
+**Tabela:**
+```html
+<th>Código</th>
+<th>Frequência</th>
+<th>Média</th>
+```
+
+#### Validação:
+- ✅ Template compila corretamente
+
+---
+
+### 📅 13/04/2026 - Correção UI: Tabela de Matérias do Aluno
+
+#### Problema:
+A tabela da aba "Matérias" exibia colunas desnecessárias.
+
+#### Solução Aplicada:
+
+**Template atualizado** (`detalhe.html`):
+- Removida coluna "Matéria" (nome da matéria)
+- Removida coluna "Professor" (nome do professor)
+
+**Colunas finais:**
+```html
+<th>Código</th>
+<th>Frequência</th>
+<th>Média</th>
+```
+
+#### Validação:
+- ✅ Template compila corretamente
+
+---
 
 ### 📅 13/04/2026 - Correção: UnboundLocalError (aluno)
 

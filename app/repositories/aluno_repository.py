@@ -77,6 +77,13 @@ class AlunoRepository:
             return [a.to_dict() for a in turma.alunos]
         return []
     
+    def get_turmas(self, aluno_id: int) -> List[Dict]:
+        """Busca turmas de um aluno específico."""
+        aluno = Aluno.query.get(aluno_id)
+        if aluno:
+            return [t.to_dict() for t in aluno.turmas]
+        return []
+    
     def get_by_field(self, field: str, value) -> List[Dict]:
         """Busca alunos por campo."""
         if hasattr(Aluno, field):
