@@ -132,12 +132,12 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes da matéria."""
-    materia_data = materia_repo.get_by_id(id)
-    if not materia_data:
+    from app.models.materia import Materia
+    materia = Materia.query.get(id)
+    if not materia:
         flash('Matéria não encontrada', 'error')
         return redirect(url_for('materias.index'))
     
-    materia = _dict_to_materia_obj(materia_data)
     return render_template('materias/detalhe.html', materia=materia)
 
 

@@ -149,25 +149,17 @@ class AlunoDTO(BaseDTO):
         if self._turmas is not None:
             return self._turmas
         
-        from app.repositories import TurmaRepository
+        from app.repositories import AlunoRepository, TurmaRepository
         from app.dtos.turma_dto import TurmaDTO
         
+        aluno_repo = self._repos.get('aluno') or AlunoRepository()
         turma_repo = self._repos.get('turma') or TurmaRepository()
         
-        # Buscar IDs das turmas
-        from app.services.supabase_client import get_supabase_client
-        try:
-            client = get_supabase_client()
-            result = client.table('alunos_turmas').select('turma_id').eq('aluno_id', self.id).execute()
-            
-            self._turmas = []
-            for item in (result.data or []):
-                turma_data = turma_repo.get_by_id(item.get('turma_id'))
-                if turma_data:
-                    self._turmas.append(TurmaDTO(turma_data, self._repos))
-        except Exception as e:
-            print(f"[ERRO] AlunoDTO.turmas: {e}")
-            self._turmas = []
+        self._turmas = []
+        turmas_raw = aluno_repo.get_by_turma(self.id)
+        
+        for item in turmas_raw:
+            self._turmas.append(TurmaDTO(item, self._repos))
         
         return self._turmas
     

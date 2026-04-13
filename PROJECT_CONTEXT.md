@@ -4,6 +4,320 @@
 
 ## 🔄 Histórico de Alterações
 
+### 📅 13/04/2026 - Correção: Página de Detalhes da Matéria
+
+#### Problema:
+A página de detalhes de cada matéria não estava exibindo corretamente:
+- Professores que lecionam a matéria
+- Turmas que possuem a matéria
+- Textos com erros de idioma (russo/francês misturado com português)
+
+#### Causa Raiz:
+1. **Controller usava objeto antigo**: O `materias_controller.py` usava `_dict_to_materia_obj()` que criava um objeto artificial sem os relacionamentos
+2. **Textos incorretos**: "Turmas que têm Esta Matéria" e "Nenhuma turma associée a esta matéria"
+
+#### Correções Aplicadas:
+
+**1. `materias_controller.py`** - Rota detalhe atualizada:
+```python
+# Antes (incorreto):
+materia_data = materia_repo.get_by_id(id)
+materia = _dict_to_materia_obj(materia_data)
+
+# Depois (correto):
+from app.models.materia import Materia
+materia = Materia.query.get(id)
+```
+
+**2. `detalhe.html`** - Textos corrigidos:
+- "Turmas que têm Esta Matéria" → "Turmas que possuem esta matéria"
+- "Nenhuma turma associée a esta matéria." → "Nenhuma turma associada a esta matéria."
+
+**3. Relacionamentos verificados**:
+- `Materia.professores`: Relationship com `professor_materias` ✅
+- `Materia.turmas`: Relationship com `turma_materias` ✅
+- Dados carregando corretamente: 2 professores, 7 turmas para Matemática
+
+#### Validação:
+- ✅ Rota `/materias/1` retorna status 200
+- ✅ Professores exibidos na tabela
+- ✅ Turmas exibidas na tabela
+- ✅ Mensagens amigáveis quando vazio
+
+---
+
+#### Problema:
+A página de detalhes do professor não estava exibindo corretamente:
+- Disponibilidades não eram carregadas
+- Turmas não eram exibidas
+
+#### Causa Raiz:
+1. **Bug no `ProfessorDTO.turmas`**: O método chamava `get_by_turma()` passando `professor_id`, mas esse método espera `turma_id` (era a relação inversa)
+
+2. **Bug no `DisponibilidadeObj`**: A classe interna não tinha acesso ao método `parse_time()` herdado de `BaseDTO`
+
+3. **Repository incompleto**: Faltava método `get_turmas()` para buscar turmas de um professor
+
+#### Correções Aplicadas:
+
+**1. `professor_repository.py`** - Adicionado novo método:
+```python
+def get_turmas(self, professor_id: int) -> List[Dict]:
+    """Retorna as turmas de um professor."""
+    professor = Professor.query.get(professor_id)
+    if professor:
+        return [t.to_dict() for t in professor.turmas]
+    return []
+```
+
+**2. `professor_dto.py`** - Corrigido `turmas` property:
+```python
+@property
+def turmas(self) -> list:
+    # Antes (incorreto): usava get_by_turma
+    # Depois (correto): usa get_turmas
+    turmas_raw = professor_repo.get_turmas(self.id)
+    self._turmas = [TurmaDTO(t, self._repos) for t in turmas_raw]
+```
+
+**3. `professor_dto.py`** - Corrigido `DisponibilidadeObj._parse_time()`:
+```python
+@staticmethod
+def _parse_time(value):
+    """Parse time from string or return None."""
+    if value is None:
+        return None
+    if hasattr(value, 'strftime'):
+        return value
+    from datetime import time
+    if isinstance(value, str):
+        parts = value.split(':')
+        return time(int(parts[0]), int(parts[1]))
+    return value
+```
+
+**4. `professores_controller.py`** - Adicionado repo ao dicionário:
+```python
+_repos = {
+    'professor': _professor_repo,
+    'materia': _materia_repo,
+    'usuario': _usuario_repo,
+    'disponibilidade': _disponibilidade_repo  # Adicionado
+}
+```
+
+#### Verificação:
+- ✅ Nome do professor: Maria Santos
+- ✅ Email: maria@escola.com
+- ✅ Materias: 1 (Matemática)
+- ✅ Disponibilidades: 10 entries (dias e horários)
+- ✅ Turmas: Carregadas corretamente via relationship
+
+---
+
+### 📅 13/04/2026 - Correção de Layout: Professor Detail Page
+
+#### Problema:
+Na página de detalhes do professor (`professores/detalhe.html`), os elementos "Disponibilidade" e "Turmas" estavam ordenados incorretamente.
+
+#### Ordem Anterior (incorreta):
+1. Matérias que Pode Lecionar
+2. Turmas
+3. Disponibilidade
+
+#### Nova Ordem (corrigida):
+1. Matérias que Pode Lecionar
+2. Disponibilidade (mover antes de Turmas - disponibilidade determina quais turmas o professor pode lecionar)
+3. Turmas
+
+#### Alteração:
+- Seção "Disponibilidade" movida para antes de "Turmas" para manter lógica de negócio
+- Botão "Adicionar" movido para o header do card para melhor UX
+
+---
+
+### 📅 13/04/2026 - Correção: Matérias não aparecem na turma
+
+#### Problema:
+A página de detalhes da turma (`turmas/detalhe.html`) mostrava "Nenhuma matéria cadastrada" mesmo após a migração para SQLAlchemy.
+
+#### Causa Raiz:
+A tabela `turma_materias` existia no banco de dados mas **não tinha associações**. A seed script não criava os registros corretamente.
+
+#### Solução Aplicada:
+1. Executado script para popular `turma_materias`:
+   - 7 turmas × 7 matérias = **49 associações criadas**
+   - Cada matéria associada com `aulas_por_periodo` baseado na carga horária:
+     - Matemática: 4 aulas/semana
+     - Português: 4 aulas/semana
+     - Ciências: 2 aulas/semana
+     - História: 2 aulas/semana
+     - Geografia: 2 aulas/semana
+     - Inglês: 2 aulas/semana
+     - Ed. Física: 2 aulas/semana
+
+2. Executado script para popular `professor_materias`:
+   - 11 associações criadas (cada professor à sua especialidade)
+
+#### Verificação:
+- ✅ `turma.materias` retorna 7 matérias
+- ✅ `turma.get_aulas_por_periodo(materia_id)` retorna valor correto
+- ✅ `materia.professores.filter_by(ativo=True)` retorna professores
+
+#### Fluxo verificado:
+```
+TurmaDTO.materias → TurmaRepository.get_materias() → turma.materias (relationship)
+                                                      ↓
+                                              materia.to_dict()
+                                              ↓
+                                         MateriaDTO(data)
+```
+
+---
+
+### 📅 13/04/2026 - Correção ImportError (turma_materias)
+
+#### Problema:
+```
+ImportError: cannot import name 'turma_materias' from 'app.models.turma'
+```
+
+#### Causa Raiz:
+A tabela `turma_materias` estava definida em `app/models/materia.py`, mas alguns arquivos tentavam importar de `app/models/turma.py`:
+
+```python
+# ❌ INCORRETO - tentou importar de turma.py
+from app.models.turma import turma_materias
+
+# ✅ CORRETO - está definido em materia.py
+from app.models.materia import turma_materias
+```
+
+#### Arquivos Corrigidos:
+
+| Arquivo | Linha | Correção |
+|---------|-------|----------|
+| `app/controllers/turmas_controller.py` | 269 | `app.models.turma` → `app.models.materia` |
+| `app/repositories/materia_repository.py` | 186, 214 | `app.models.turma` → `app.models.materia` |
+
+#### Estrutura Correta:
+```
+app/models/
+├── materia.py          # Define: turma_materias, professor_materias
+│   └── turma_materias = db.Table('turma_materias', ...)
+│
+└── turma.py           # Usa: secondary='turma_materias' no relationship
+    └── materias = relationship('Materia', secondary='turma_materias', ...)
+```
+
+#### Testes Realizados:
+- ✅ Imports funcionando
+- ✅ App criada com sucesso
+- ✅ Blueprint registrado
+- ✅ Matérias: 7 encontradas
+- ✅ Turmas: 7 encontradas
+- ✅ Servidor funcionando
+
+---
+
+### 📅 13/04/2026 - Correção ModuleNotFoundError (Imports Remanescentes do Supabase)
+
+#### Problema:
+```
+ModuleNotFoundError: No module named 'app.services.supabase_client'
+```
+
+#### Causa Raiz:
+Após remover o arquivo `supabase_client.py`, havia **8 arquivos** que ainda importavam dele:
+
+1. `app/controllers/professores_controller.py` (2 imports)
+2. `app/dtos/professor_dto.py` (2 imports)
+3. `app/controllers/configuracoes_controller.py` (1 import)
+4. `app/controllers/turmas_controller.py` (1 import)
+5. `app/dtos/turma_dto.py` (1 import)
+6. `app/dtos/aluno_dto.py` (1 import)
+
+#### Solução Aplicada:
+
+**1. Criado novo Repository:**
+- `app/repositories/disponibilidade_repository.py`: Repository para `DisponibilidadeProfessor`
+
+**2. Atualizado Modelo:**
+- `app/models/especialidade.py`: Adicionado método `to_dict()` ao `DisponibilidadeProfessor`
+
+**3. Atualizado `__init__.py` dos Models:**
+- Adicionado `DisponibilidadeProfessor` ao exports
+
+**4. Atualizado `__init__.py` dos Repositories:**
+- Adicionado `DisponibilidadeRepository` ao exports
+
+**5. Corrigidos Controllers:**
+- `professores_controller.py`: Removidos imports do Supabase, usa SQLAlchemy
+- `turmas_controller.py`: Removido import do Supabase, usa SQLAlchemy
+- `configuracoes_controller.py`: Reescrito `verificar_banco()` para usar SQLAlchemy
+
+**6. Corrigidos DTOs:**
+- `professor_dto.py`: Removidos imports do Supabase
+- `turma_dto.py`: `get_aulas_por_periodo()` usa SQLAlchemy
+- `aluno_dto.py`: Propriedade `turmas` usa SQLAlchemy
+
+#### Boas Práticas para Evitar Este Erro:
+- **Remover imports órfãos** quando um módulo é removido
+- **Verificar todos os arquivos** que usam um módulo antes de removê-lo
+- **Usar grep** para encontrar imports relacionados
+- **Testar incrementalmente** após cada mudança
+
+#### Testes Realizados:
+- Todos os imports: ✅ Sucesso
+- App criação: ✅ Sucesso
+- Blueprint registro: ✅ Sucesso
+- Tabelas no banco: 18 tabelas
+- Servidor Flask: ✅ Funcionando
+
+---
+
+### 📅 13/04/2026 - Correção do Erro NoInspectionAvailable
+
+#### Problema:
+```
+sqlalchemy.exc.NoInspectionAvailable: No inspection system is available for object of type <class 'str'>
+```
+
+#### Causa Raiz:
+No arquivo `app/repositories/aluno_repository.py`, linha 74, havia:
+```python
+turma = db.session.get('Turma', turma_id)  # ❌ String ao invés do modelo
+```
+
+O SQLAlchemy esperava um **modelo/classe** (`Turma`), mas recebeu uma **string** (`'Turma'`).
+
+#### Solução Aplicada:
+1. Adicionado import do modelo `Turma` no arquivo
+2. Substituído `db.session.get('Turma', turma_id)` por `Turma.query.get(turma_id)`
+
+```python
+# Antes (INCORRETO):
+turma = db.session.get('Turma', turma_id)
+
+# Depois (CORRETO):
+from app.models.turma import Turma  # Linha 10
+turma = Turma.query.get(turma_id)
+```
+
+#### Boas Práticas para Evitar Este Erro:
+- **Sempre usar modelos/classe** ao invés de strings para operações ORM
+- **Usar `Model.query.get(id)`** para buscar por ID
+- **Usar `db.session.get(Model, id)`** passando o modelo, nunca uma string
+- **Importar modelos** explicitamente no início do arquivo
+
+#### Testes Realizados:
+- `get_by_turma(1)`: ✅ Sucesso - retornou 2 alunos
+- `get_all()`: ✅ Sucesso - retornou 126 alunos
+- `search("Maria")`: ✅ Sucesso - retornou 5 resultados
+- Todos os repositories testados: ✅ Passaram
+
+---
+
 ### 📅 13/04/2026 - Remoção do Supabase e Migração para PostgreSQL
 
 #### Alterações Realizadas:

@@ -1,13 +1,12 @@
-# app/controllers/configuracoes_controller.py - Controller de Configurações (Supabase)
+# app/controllers/configuracoes_controller.py - Controller de Configurações
 
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
-
+from app import db
 from app.repositories import UsuarioRepository
 
 configuracoes_bp = Blueprint('configuracoes', __name__, url_prefix='/configuracoes')
 
-# Instância do repositório
 usuario_repo = UsuarioRepository()
 
 
@@ -88,7 +87,26 @@ def verificar_banco():
     if not current_user.tem_permissao(['diretora', 'coordenacao']):
         return jsonify({'error': 'Sem permissão'}), 403
     
-    from app.services.supabase_client import verify_required_tables
-    resultado = verify_required_tables()
+    required_tables = [
+        'usuarios', 'alunos', 'professores', 'turmas', 'aulas',
+        'frequencias', 'notas', 'feriados', 'dias_nao_letivos',
+        'materias', 'disponibilidade_professores'
+    ]
     
-    return jsonify(resultado)
+    inspector = db.inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+    
+    missing_tables = [t for t in required_tables if t not in existing_tables]
+    
+    if missing_tables:
+        return jsonify({
+            'success': False,
+            'missing_tables': missing_tables,
+            'message': f'Tabelas não encontradas: {", ".join(missing_tables)}'
+        })
+    
+    return jsonify({
+        'success': True,
+        'missing_tables': [],
+        'message': 'Todas as tabelas necessárias estão presentes.'
+    })

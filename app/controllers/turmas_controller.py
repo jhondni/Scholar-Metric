@@ -266,12 +266,13 @@ def materias(id):
     if request.method == 'POST':
         materia_ids = request.form.getlist('materias')
         
-        # Remover todas as matérias atuais
-        from app.services.supabase_client import get_supabase_client
-        client = get_supabase_client()
-        client.table('turma_materias').delete().eq('turma_id', id).execute()
+        from app.models.materia import turma_materias
+        from app import db
         
-        # Adicionar novas matérias
+        db.session.execute(
+            turma_materias.delete().where(turma_materias.c.turma_id == id)
+        )
+        
         for mid in materia_ids:
             aulas = request.form.get(f'aulas_{mid}', 2, type=int)
             _turma_repo.set_materia(id, int(mid), aulas)

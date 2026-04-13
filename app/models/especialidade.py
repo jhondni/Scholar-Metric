@@ -68,5 +68,16 @@ class DisponibilidadeProfessor(db.Model):
         }
         return dias.get(dia_semana, '')
     
+    def to_dict(self) -> dict:
+        """Converte a disponibilidade para dicionário."""
+        return {
+            'id': self.id,
+            'professor_id': self.professor_id,
+            'dia_semana': self.dia_semana,
+            'horario_inicio': self.horario_inicio.isoformat() if self.horario_inicio else None,
+            'horario_fim': self.horario_fim.isoformat() if self.horario_fim else None,
+            'ativo': self.ativo
+        }
+    
     def __repr__(self):
         return f'<Disponibilidade Professor {self.professor_id} - {self.get_dia_label(self.dia_semana)}>'

@@ -104,18 +104,17 @@ class TurmaDTO(BaseDTO):
         if materia_id in self._aulas_por_periodo_cache:
             return self._aulas_por_periodo_cache[materia_id]
         
-        from app.services.supabase_client import get_supabase_client
+        from app.models.turma import Turma
+        from app.models.materia import turma_materias
+        from app import db
+        
         try:
-            client = get_supabase_client()
-            result = client.table('turma_materias').select('aulas_por_periodo')
-            result = result.eq('turma_id', self.id).eq('materia_id', materia_id)
-            result = result.execute()
+            result = db.session.query(turma_materias.c.aulas_por_periodo).filter(
+                turma_materias.c.turma_id == self.id,
+                turma_materias.c.materia_id == materia_id
+            ).first()
             
-            if result.data:
-                value = result.data[0].get('aulas_por_periodo', 0)
-            else:
-                value = 0
-            
+            value = result[0] if result else 0
             self._aulas_por_periodo_cache[materia_id] = value
             return value
         except Exception as e:

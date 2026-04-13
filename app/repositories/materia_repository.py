@@ -183,7 +183,8 @@ class MateriaRepository:
                              aulas_por_periodo: int = 2) -> bool:
         """Associa uma matéria a uma turma com configuração de aulas."""
         try:
-            from app.models.turma import Turma, turma_materias
+            from app.models.turma import Turma
+            from app.models.materia import turma_materias
             materia = Materia.query.get(materia_id)
             turma = Turma.query.get(turma_id)
             if materia and turma:
@@ -211,7 +212,8 @@ class MateriaRepository:
     def dissociate_turma(self, materia_id: int, turma_id: int) -> bool:
         """Remove associação de matéria com turma."""
         try:
-            from app.models.turma import Turma, turma_materias
+            from app.models.turma import Turma
+            from app.models.materia import turma_materias
             materia = Materia.query.get(materia_id)
             turma = Turma.query.get(turma_id)
             if materia and turma and materia in turma.materias:

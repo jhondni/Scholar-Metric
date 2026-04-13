@@ -7,6 +7,7 @@ Operações de acesso a dados para a tabela de alunos via SQLAlchemy.
 from typing import List, Optional, Dict
 from app import db
 from app.models.aluno import Aluno
+from app.models.turma import Turma
 
 
 class AlunoRepository:
@@ -71,7 +72,7 @@ class AlunoRepository:
     
     def get_by_turma(self, turma_id: int) -> List[Dict]:
         """Busca alunos de uma turma específica."""
-        turma = db.session.get('Turma', turma_id)
+        turma = Turma.query.get(turma_id)
         if turma:
             return [a.to_dict() for a in turma.alunos]
         return []

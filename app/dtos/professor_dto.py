@@ -1,7 +1,7 @@
 """
 app/dtos/professor_dto.py - DTO de Professor
 
-Encapsula dados do professor do Supabase e fornece a mesma interface
+Encapsula dados do professor e fornece a mesma interface
 que o modelo SQLAlchemy Professor.
 """
 
@@ -18,10 +18,10 @@ class ProfessorDTO(BaseDTO):
     
     def __init__(self, data: dict, repos: dict = None):
         """
-        Inicializa o DTO a partir de dados do Supabase.
+        Inicializa o DTO a partir de dados.
         
         Args:
-            data: Dicionário com dados do Supabase
+            data: Dicionário com dados
             repos: Dicionário com repositórios para consultas
         """
         self.id = data.get('id')
@@ -36,7 +36,6 @@ class ProfessorDTO(BaseDTO):
         self.criado_em = self.parse_datetime(data.get('criado_em'))
         self.atualizado_em = self.parse_datetime(data.get('atualizado_em'))
         
-        # Repositórios para consultas
         self._repos = repos or {}
         self._usuario = None
         self._turmas = None
@@ -46,12 +45,7 @@ class ProfessorDTO(BaseDTO):
     
     @property
     def usuario(self):
-        """
-        Retorna o objeto UsuarioDTO associado.
-        
-        Returns:
-            UsuarioDTO: Objeto do usuário
-        """
+        """Retorna o objeto UsuarioDTO associado."""
         if self._usuario is not None:
             return self._usuario
         
@@ -64,21 +58,12 @@ class ProfessorDTO(BaseDTO):
         if usuario_data:
             self._usuario = UsuarioDTO(usuario_data)
         else:
-            # Criar objeto vazio para evitar erros
             self._usuario = UsuarioDTO({'nome': 'N/A', 'email': 'N/A'})
         
         return self._usuario
     
     def total_aulas(self, periodo: tuple = None) -> int:
-        """
-        Retorna o total de aulas do professor.
-        
-        Args:
-            periodo: Tupla com (data_inicio, data_fim) para filtrar
-            
-        Returns:
-            int: Número de aulas
-        """
+        """Retorna o total de aulas do professor."""
         from app.repositories import AulaRepository
         
         aula_repo = self._repos.get('aula') or AulaRepository()
@@ -93,12 +78,7 @@ class ProfessorDTO(BaseDTO):
     
     @property
     def turmas(self) -> list:
-        """
-        Retorna as turmas do professor.
-        
-        Returns:
-            list: Lista de TurmaDTO
-        """
+        """Retorna as turmas do professor."""
         if self._turmas is not None:
             return self._turmas
         
@@ -107,36 +87,14 @@ class ProfessorDTO(BaseDTO):
         
         professor_repo = self._repos.get('professor') or ProfessorRepository()
         
-        turmas_raw = professor_repo.get_by_turma(self.id)
-        # get_by_turma na verdade busca professores de uma turma
-        # Precisamos buscar as turmas do professor
-        
-        from app.services.supabase_client import get_supabase_client
-        try:
-            client = get_supabase_client()
-            result = client.table('professores_turmas').select('turma_id').eq('professor_id', self.id).execute()
-            
-            turma_repo = self._repos.get('turma') or TurmaRepository()
-            self._turmas = []
-            
-            for item in (result.data or []):
-                turma_data = turma_repo.get_by_id(item.get('turma_id'))
-                if turma_data:
-                    self._turmas.append(TurmaDTO(turma_data, self._repos))
-        except Exception as e:
-            print(f"[ERRO] ProfessorDTO.turmas: {e}")
-            self._turmas = []
+        turmas_raw = professor_repo.get_turmas(self.id)
+        self._turmas = [TurmaDTO(t, self._repos) for t in turmas_raw]
         
         return self._turmas
     
     @property
     def materias(self) -> list:
-        """
-        Retorna as matérias que o professor pode lecionar.
-        
-        Returns:
-            list: Lista de MateriaDTO
-        """
+        """Retorna as matérias que o professor pode lecionar."""
         if self._materias is not None:
             return self._materias
         
@@ -152,66 +110,53 @@ class ProfessorDTO(BaseDTO):
     
     @property
     def disponibilidades(self) -> list:
-        """
-        Retorna as disponibilidades do professor.
-        
-        Returns:
-            list: Lista de objetos de disponibilidade
-        """
+        """Retorna as disponibilidades do professor."""
         if self._disponibilidades is not None:
             return self._disponibilidades
         
-        from app.services.supabase_client import get_supabase_client
-        try:
-            client = get_supabase_client()
-            result = client.table('disponibilidade_professores').select('*')
-            result = result.eq('professor_id', self.id).eq('ativo', True)
-            result = result.order('dia_semana').execute()
+        from app.repositories import DisponibilidadeRepository
+        
+        disp_repo = self._repos.get('disponibilidade') or DisponibilidadeRepository()
+        
+        disps_raw = disp_repo.get_by_professor(self.id)
+        
+        class DisponibilidadeObj:
+            def __init__(self, data):
+                self.id = data.get('id')
+                self.professor_id = data.get('professor_id')
+                self.dia_semana = data.get('dia_semana')
+                self.horario_inicio = self._parse_time(data.get('horario_inicio'))
+                self.horario_fim = self._parse_time(data.get('horario_fim'))
+                self.ativo = data.get('ativo', True)
             
-            self._disponibilidades = []
-            for disp in (result.data or []):
-                disp_obj = type('Disponibilidade', (), {
-                    'id': disp.get('id'),
-                    'professor_id': disp.get('professor_id'),
-                    'dia_semana': disp.get('dia_semana'),
-                    'horario_inicio': self.parse_time(disp.get('horario_inicio')),
-                    'horario_fim': self.parse_time(disp.get('horario_fim')),
-                    'ativo': self.parse_bool(disp.get('ativo', True)),
-                    'get_dia_label': lambda obj, ds: self._get_dia_label(ds)
-                })()
-                self._disponibilidades.append(disp_obj)
-        except Exception as e:
-            error_msg = str(e)
+            @staticmethod
+            def _parse_time(value):
+                """Parse time from string or return None."""
+                if value is None:
+                    return None
+                if hasattr(value, 'strftime'):
+                    return value
+                from datetime import time
+                if isinstance(value, str):
+                    parts = value.split(':')
+                    return time(int(parts[0]), int(parts[1]))
+                return value
             
-            # Tratamento específico para erro de tabela não encontrada (PGRST205)
-            if 'PGRST205' in error_msg or 'Could not find the table' in error_msg:
-                print(f"[AVISO] ProfessorDTO.disponibilidades: Tabela 'disponibilidade_professores' "
-                      f"não encontrada no Supabase. Execute o script de migração: "
-                      f"database/migrations/001_create_disponibilidade_professores.sql")
-            # Tratamento para erro de conexão
-            elif 'Connection' in error_msg or 'timeout' in error_msg.lower():
-                print(f"[ERRO] ProfessorDTO.disponibilidades: Erro de conexão com Supabase. "
-                      f"Verifique a configuração SUPABASE_URL e SUPABASE_ANON_KEY")
-            # Outros erros
-            else:
-                print(f"[ERRO] ProfessorDTO.disponibilidades: {e}")
-            
-            self._disponibilidades = []
+            @staticmethod
+            def get_dia_label(dia):
+                dias = {0: 'Segunda-feira', 1: 'Terça-feira', 2: 'Quarta-feira',
+                        3: 'Quinta-feira', 4: 'Sexta-feira', 5: 'Sábado', 6: 'Domingo'}
+                return dias.get(dia, '')
+        
+        self._disponibilidades = [DisponibilidadeObj(d) for d in disps_raw]
         
         return self._disponibilidades
     
     @staticmethod
     def _get_dia_label(dia_semana: int) -> str:
         """Retorna label do dia da semana."""
-        dias = {
-            0: 'Segunda-feira',
-            1: 'Terça-feira',
-            2: 'Quarta-feira',
-            3: 'Quinta-feira',
-            4: 'Sexta-feira',
-            5: 'Sábado',
-            6: 'Domingo'
-        }
+        dias = {0: 'Segunda-feira', 1: 'Terça-feira', 2: 'Quarta-feira',
+                3: 'Quinta-feira', 4: 'Sexta-feira', 5: 'Sábado', 6: 'Domingo'}
         return dias.get(dia_semana, '')
     
     def __repr__(self):

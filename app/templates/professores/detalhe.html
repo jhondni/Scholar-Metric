@@ -63,33 +63,13 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Turmas</h3></div>
-    <div class="card-body">
-        {% if professor.turmas %}
-        <div class="table-container">
-            <table class="table">
-                <thead><tr><th>Código</th><th>Nome</th><th>Série</th><th>Turno</th></tr></thead>
-                <tbody>
-                    {% for turma in professor.turmas %}
-                    <tr>
-                        <td>{{ turma.codigo }}</td>
-                        <td>{{ turma.nome }}</td>
-                        <td>{{ turma.serie }}</td>
-                        <td>{{ turma.turno|capitalize }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-muted">Professor não está associado a nenhuma turma.</p>
-        {% endif %}
-    </div>
-</div>
-
-<div class="card mt-3">
     <div class="card-header">
         <h3 class="card-title">Disponibilidade</h3>
+        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+        <button class="btn btn-sm btn-outline" data-modal="modalDisponibilidade">
+            <i class="fas fa-plus"></i> Adicionar
+        </button>
+        {% endif %}
     </div>
     <div class="card-body">
         {% if professor.disponibilidades %}
@@ -115,11 +95,30 @@
         {% else %}
         <p class="text-muted">Nenhuma disponibilidade cadastrada. O professor pode lecionar em qualquer horário.</p>
         {% endif %}
-        
-        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
-        <button class="btn btn-sm btn-outline mt-2" data-modal="modalDisponibilidade">
-            <i class="fas fa-plus"></i> Adicionar Disponibilidade
-        </button>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">Turmas</h3></div>
+    <div class="card-body">
+        {% if professor.turmas %}
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Código</th><th>Nome</th><th>Série</th><th>Turno</th></tr></thead>
+                <tbody>
+                    {% for turma in professor.turmas %}
+                    <tr>
+                        <td>{{ turma.codigo }}</td>
+                        <td>{{ turma.nome }}</td>
+                        <td>{{ turma.serie }}</td>
+                        <td>{{ turma.turno|capitalize }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Professor não está associado a nenhuma turma.</p>
         {% endif %}
     </div>
 </div>

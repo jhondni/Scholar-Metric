@@ -1,31 +1,27 @@
-# app/controllers/professores_controller.py - Controller de Professores (Supabase + DTOs)
+# app/controllers/professores_controller.py - Controller de Professores
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, TextAreaField
 from wtforms.validators import DataRequired, Length, Optional
-from datetime import datetime, time as time_class
 
-from app.repositories import ProfessorRepository, MateriaRepository, UsuarioRepository
-from app.dtos.professor_dto import ProfessorDTO
+from app.repositories import ProfessorRepository, MateriaRepository, UsuarioRepository, DisponibilidadeRepository
 
 professores_bp = Blueprint('professores', __name__, url_prefix='/professores')
 
-# Instâncias dos repositórios (reutilizadas)
 _professor_repo = ProfessorRepository()
 _materia_repo = MateriaRepository()
 _usuario_repo = UsuarioRepository()
+_disponibilidade_repo = DisponibilidadeRepository()
 
-# Dicionário de repositórios para DTOs
 _repos = {
     'professor': _professor_repo,
     'materia': _materia_repo,
-    'usuario': _usuario_repo
+    'usuario': _usuario_repo,
+    'disponibilidade': _disponibilidade_repo
 }
 
-
-# ==================== Formulários ====================
 
 class ProfessorForm(FlaskForm):
     """Formulário de professor."""
@@ -44,10 +40,8 @@ class ProfessorForm(FlaskForm):
     ])
 
 
-# ==================== Funções Auxiliares ====================
-
 def _paginate(items: list, page: int, per_page: int = 20):
-    """Cria objeto de paginação compatível com Flask-SQLAlchemy."""
+    """Cria objeto de paginação."""
     total = len(items)
     start = (page - 1) * per_page
     end = start + per_page
@@ -72,8 +66,6 @@ def _paginate(items: list, page: int, per_page: int = 20):
     return PaginateObj(page_items, page, per_page, total)
 
 
-# ==================== Rotas ====================
-
 @professores_bp.route('/')
 @login_required
 def index():
@@ -94,6 +86,7 @@ def index():
                     professores_filtered.append(p)
         professores_raw = professores_filtered
     
+    from app.dtos.professor_dto import ProfessorDTO
     professores_list = [ProfessorDTO(p, _repos) for p in professores_raw]
     professores = _paginate(professores_list, page)
     
@@ -143,6 +136,7 @@ def detalhe(id):
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
+    from app.dtos.professor_dto import ProfessorDTO
     professor = ProfessorDTO(professor_data, _repos)
     return render_template('professores/detalhe.html', professor=professor)
 
@@ -160,6 +154,7 @@ def editar(id):
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
+    from app.dtos.professor_dto import ProfessorDTO
     professor = ProfessorDTO(professor_data, _repos)
     form = ProfessorForm(obj=professor)
     
@@ -221,8 +216,6 @@ def api_buscar():
     return jsonify(resultado)
 
 
-# ==================== Disponibilidade do Professor ====================
-
 @professores_bp.route('/<int:id>/adicionar-disponibilidade', methods=['POST'])
 @login_required
 def adicionar_disponibilidade(id):
@@ -236,7 +229,6 @@ def adicionar_disponibilidade(id):
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
-    # Processar múltiplos dias selecionados
     dias_semana = request.form.getlist('dias_semana')
     horario_inicio = request.form.get('horario_inicio')
     horario_fim = request.form.get('horario_fim')
@@ -245,94 +237,54 @@ def adicionar_disponibilidade(id):
         flash('Selecione pelo menos um dia da semana', 'error')
         return redirect(url_for('professores.detalhe', id=id))
     
-    if horario_inicio and horario_fim:
-        from app.services.supabase_client import get_supabase_client
-        
-        try:
-            client = get_supabase_client()
-            dias_criados = 0
-            dias_existentes = 0
-            erros = []
-            
-            # Dias da semana para exibir nomes nos logs
-            nomes_dias = {
-                '0': 'Segunda-feira',
-                '1': 'Terça-feira',
-                '2': 'Quarta-feira',
-                '3': 'Quinta-feira',
-                '4': 'Sexta-feira',
-                '5': 'Sábado',
-                '6': 'Domingo'
-            }
-            
-            for dia in dias_semana:
-                try:
-                    # Verificar se já existe para este professor, dia e horário
-                    existing = client.table('disponibilidade_professores') \
-                        .select('id') \
-                        .eq('professor_id', id) \
-                        .eq('dia_semana', int(dia)) \
-                        .eq('horario_inicio', horario_inicio) \
-                        .eq('horario_fim', horario_fim) \
-                        .execute()
-                    
-                    if existing.data:
-                        dias_existentes += 1
-                        continue
-                    
-                    client.table('disponibilidade_professores').insert({
-                        'professor_id': id,
-                        'dia_semana': int(dia),
-                        'horario_inicio': horario_inicio,
-                        'horario_fim': horario_fim,
-                        'ativo': True
-                    }).execute()
-                    dias_criados += 1
-                    
-                except Exception as day_error:
-                    error_msg = str(day_error)
-                    nome_dia = nomes_dias.get(dia, f'Dia {dia}')
-                    erros.append(f"{nome_dia}: {error_msg[:50]}")
-            
-            # Mensagens de resultado
-            if dias_criados > 0:
-                if dias_criados == 1:
-                    flash(f'Disponibilidade adicionada com sucesso', 'success')
-                else:
-                    flash(f'{dias_criados} disponibilidades adicionadas com sucesso', 'success')
-            
-            if dias_existentes > 0:
-                if dias_existentes == 1:
-                    flash('1 disponibilidade já existia e foi ignorada', 'info')
-                else:
-                    flash(f'{dias_existentes} disponibilidades já existiam e foram ignoradas', 'info')
-            
-            if erros:
-                flash(f'Erros ao adicionar: {"; ".join(erros)}', 'error')
-                
-        except Exception as e:
-            error_msg = str(e)
-            
-            # Tratamento específico para erro de tabela não encontrada (PGRST205)
-            if 'PGRST205' in error_msg or 'Could not find the table' in error_msg:
-                print(f"[ERRO] adicionar_disponibilidade: Tabela 'disponibilidade_professores' "
-                      f"não encontrada no Supabase.")
-                flash('Erro: Tabela de disponibilidade não encontrada no banco de dados. '
-                      'Execute o script de migração SQL primeiro.', 'error')
-            # Tratamento para erro de validação de horário
-            elif 'chk_horario_valido' in error_msg:
-                flash('Erro: O horário de fim deve ser maior que o horário de início.', 'error')
-            # Outros erros
-            else:
-                print(f"[ERRO] adicionar_disponibilidade: {e}")
-                flash(f'Erro ao adicionar disponibilidade: {error_msg[:100]}', 'error')
-    else:
+    if not horario_inicio or not horario_fim:
         flash('Preencha os horários', 'error')
+        return redirect(url_for('professores.detalhe', id=id))
+    
+    nomes_dias = {
+        '0': 'Segunda-feira', '1': 'Terça-feira', '2': 'Quarta-feira',
+        '3': 'Quinta-feira', '4': 'Sexta-feira', '5': 'Sábado', '6': 'Domingo'
+    }
+    
+    dias_criados = 0
+    dias_existentes = 0
+    erros = []
+    
+    for dia in dias_semana:
+        try:
+            if _disponibilidade_repo.exists_by_dia_horario(id, int(dia), horario_inicio, horario_fim):
+                dias_existentes += 1
+                continue
+            
+            result = _disponibilidade_repo.create({
+                'professor_id': id,
+                'dia_semana': int(dia),
+                'horario_inicio': horario_inicio,
+                'horario_fim': horario_fim,
+                'ativo': True
+            })
+            
+            if result:
+                dias_criados += 1
+            else:
+                erros.append(f"{nomes_dias.get(dia, f'Dia {dia}')}: erro ao criar")
+                
+        except Exception as day_error:
+            erros.append(f"{nomes_dias.get(dia, f'Dia {dia}')}: {str(day_error)[:50]}")
+    
+    if dias_criados > 0:
+        msg = 'disponibilidade adicionada' if dias_criados == 1 else f'{dias_criados} disponibilidades adicionadas'
+        flash(f'{msg} com sucesso', 'success')
+    
+    if dias_existentes > 0:
+        msg = '1 disponibilidade já existia' if dias_existentes == 1 else f'{dias_existentes} disponibilidades já existiam'
+        flash(f'{msg} e foi ignorada', 'info')
+    
+    if erros:
+        flash(f'Erros ao adicionar: {"; ".join(erros)}', 'error')
     
     return redirect(url_for('professores.detalhe', id=id))
 
-
-# ==================== Matérias do Professor ====================
 
 @professores_bp.route('/<int:id>/materias', methods=['GET', 'POST'])
 @login_required
@@ -347,17 +299,14 @@ def materias(id):
         flash('Professor não encontrado', 'error')
         return redirect(url_for('professores.index'))
     
+    from app.dtos.professor_dto import ProfessorDTO
     professor = ProfessorDTO(professor_data, _repos)
     
     if request.method == 'POST':
         materia_ids = request.form.getlist('materias')
         
-        # Limpar matérias atuais via Supabase
-        from app.services.supabase_client import get_supabase_client
-        client = get_supabase_client()
-        client.table('professor_materias').delete().eq('professor_id', id).execute()
+        _disponibilidade_repo.delete_by_professor(id)
         
-        # Adicionar novas matérias
         for mid in materia_ids:
             _professor_repo.associate_materia(id, int(mid))
         

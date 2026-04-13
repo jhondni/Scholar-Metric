@@ -86,6 +86,13 @@ class ProfessorRepository:
             return [p.to_dict() for p in turma.professores]
         return []
     
+    def get_turmas(self, professor_id: int) -> List[Dict]:
+        """Retorna as turmas de um professor."""
+        professor = Professor.query.get(professor_id)
+        if professor:
+            return [t.to_dict() for t in professor.turmas]
+        return []
+    
     def get_by_materia(self, materia_id: int) -> List[Dict]:
         """Busca professores que podem lecionar uma matéria."""
         from app.models.materia import Materia
