@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Atividades - Analitcs School{% endblock %}
+{% block page_title %}Atividades{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <div>
+        {% if turma %}
+        <span class="badge badge-primary">{{ turma.nome }}</span>
+        {% endif %}
+        {% if materia %}
+        <span class="badge badge-info">{{ materia.nome }}</span>
+        {% endif %}
+    </div>
+    {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+    <a href="{{ url_for('atividades.novo', turma_id=turma.id if turma else 0) }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nova Atividade
+    </a>
+    {% endif %}
+</div>
+
+{% if atividades %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Matéria</th>
+                <th>Peso</th>
+                <th>Notas</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for atividade in atividades %}
+            <tr>
+                <td>{{ atividade.data }}</td>
+                <td>{{ atividade.nome }}</td>
+                <td>
+                    <span class="badge badge-{% if atividade.tipo == 'prova' %}danger{% elif atividade.tipo == 'trabalho' %}success{% else %}info{% endif %}">
+                        {{ atividade.tipo }}
+                    </span>
+                </td>
+                <td>{{ atividade.materia_id }}</td>
+                <td>{{ atividade.peso }}</td>
+                <td>
+                    <span class="badge badge-{% if atividade.valor_maximo > 0 %}success{% else %}warning{% endif %}">
+                        {{ atividade.notas|length if atividade.notas else 0 }} notas
+                    </span>
+                </td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="{{ url_for('atividades.lancar_notas', atividade_id=atividade.id) }}" class="btn btn-sm btn-outline" title="Lançar Notas">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{{ url_for('atividades.ver_notas', atividade_id=atividade.id) }}" class="btn btn-sm btn-outline" title="Ver Notas">
+                            <i class="fas fa-list"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted">Nenhuma atividade encontrada.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

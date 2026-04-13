@@ -16,6 +16,7 @@ from app.repositories.nota_repository import NotaRepository
 from app.repositories.feriado_repository import FeriadoRepository, DiaNaoLetivoRepository
 from app.repositories.escola_repository import EscolaRepository
 from app.repositories.disponibilidade_repository import DisponibilidadeRepository
+from app.repositories.atividade_repository import AtividadeRepository
 
 __all__ = [
     'BaseRepository',
@@ -31,4 +32,5 @@ __all__ = [
     'DiaNaoLetivoRepository',
     'EscolaRepository',
     'DisponibilidadeRepository',
+    'AtividadeRepository',
 ]

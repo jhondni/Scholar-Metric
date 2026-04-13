@@ -4,6 +4,319 @@
 
 ## 🔄 Histórico de Alterações
 
+### 📅 13/04/2026 - Correção: UnboundLocalError (aluno)
+
+#### Erro:
+```
+UnboundLocalError: local variable 'aluno' referenced before assignment
+```
+
+#### Local:
+`app/controllers/alunos_controller.py`, linha 255
+
+#### Causa Raiz:
+A variável `aluno` era usada dentro do loop `for` antes de ser definida:
+```python
+# ❌ ERRO: aluno usado na linha 255, mas definido na linha 258
+if ano_atual in notas_por_ano:
+    for materia_id, dados in notas_por_ano[ano_atual].items():
+        ...
+        'frequencia': aluno.percentual_frequencia()  # ← ERRO
+
+aluno = AlunoDTO(aluno_data, _repos)  # ← Definido depois do uso
+```
+
+#### Solução:
+Mover a criação do `AlunoDTO` para **antes** do loop:
+
+```python
+# Criar DTO do aluno antes de usar (necessário para calcular frequência)
+aluno = AlunoDTO(aluno_data, _repos)
+
+materias_do_aluno = []
+ano_atual = date.today().year
+
+if ano_atual in notas_por_ano:
+    for materia_id, dados in notas_por_ano[ano_atual].items():
+        ...
+        'frequencia': aluno.percentual_frequencia()  # ← Agora funciona
+```
+
+#### Validação:
+- ✅ Sintaxe verificada
+- ✅ Código compila sem erros
+
+---
+
+### 📅 13/04/2026 - Correção: Exibição de Matérias do Aluno
+
+#### Problema:
+Na aba "Turmas" da página de detalhes do aluno, eram exibidas informações incorretas (turmas em vez de matérias).
+
+#### Solução Aplicada:
+
+**1. Controller atualizado** (`alunos_controller.py`):
+- Adicionada variável `materias_do_aluno` para buscar:
+  - Código da matéria
+  - Nome da matéria
+  - Nome do professor responsável
+  - Frequência do aluno
+  - Média do aluno
+
+```python
+# Buscar matérias do aluno (para aba Turmas)
+for materia_id, dados in notas_por_ano[ano_atual].items():
+    materia = materia_repo.get_by_id(materia_id)
+    profes = professor_repo.get_by_materia(materia_id)
+    professor_nome = profes[0].get('nome', 'Não atribuído') if profes else 'Não atribuído'
+    
+    materias_do_aluno.append({
+        'codigo': materia.get('codigo', ''),
+        'materia_nome': dados['materia_nome'],
+        'professor_nome': professor_nome,
+        'media': dados.get('media', 0),
+        'frequencia': aluno.percentual_frequencia()
+    })
+```
+
+**2. Template atualizado** (`detalhe.html`):
+- Alterado título: "Turmas" → "Matérias"
+- Colunas ajustadas:
+  - **Código** → código da matéria
+  - **Matéria** → nome da matéria
+  - **Professor** → nome do professor
+  - **Frequência** → frequência do aluno
+  - **Média** → média do aluno
+- Removida coluna: "Série"
+
+**3. Dados enviados ao template**:
+```python
+return render_template('alunos/detalhe.html', 
+    aluno=aluno, 
+    notas_por_ano=notas_por_ano, 
+    materias_do_aluno=materias_do_aluno)
+```
+
+#### Validação:
+- ✅ Template renderiza corretamente
+- ✅ Colunas seguem novo padrão
+
+---
+
+### 📅 13/04/2026 - Correção: Exibição de Notas por Matéria
+
+#### Problema:
+`materia_id` retornava como `None` ao exibir notas do aluno.
+
+#### Causa Raiz:
+O método `Nota.to_dict()` não incluía `materia_id` no dicionário retornado.
+
+#### Solução Aplicada:
+
+**1. Modelo atualizado** (`app/models/nota.py`):
+```python
+def to_dict(self) -> dict:
+    return {
+        ...
+        'materia_id': self.materia_id,  # ← Adicionado
+        ...
+    }
+```
+
+**2. Controller com fallback** (`alunos_controller.py`):
+```python
+# Fallback: get materia_id from atividade if not set on nota
+if not materia_id and nota.get('atividade_id'):
+    atividade = atividade_repo.get_by_id(nota['atividade_id'])
+    if atividade:
+        materia_id = atividade.get('materia_id')
+```
+
+#### Validação:
+- ✅ materia_id exibido corretamente nas notas
+
+---
+
+### 📅 13/04/2026 - Correção: Erro em turma_repo.get_all()
+
+#### Erro:
+```
+TypeError: TurmaRepository.get_all() got an unexpected keyword argument 'ativa'
+```
+
+#### Causa:
+O método `get_all()` do `TurmaRepository` não aceitava o parâmetro `ativa` diretamente como argumento, mas utilizava o parâmetro `filters` para filtragem.
+
+As chamadas em `atividades_controller.py` usavam:
+```python
+turmas = turma_repo.get_all(ativa=True)  # Incorreto
+```
+
+#### Solução Aplicada:
+Corrigida a chamada para usar o parâmetro `filters`:
+```python
+turmas = turma_repo.get_all(filters={'ativa': True})  # Correto
+```
+
+#### Arquivos Modificados:
+- `app/controllers/atividades_controller.py` (linhas 116 e 182)
+
+#### Validação:
+- ✅ Página de atividades retorna 200
+
+---
+
+### 📅 13/04/2026 - Correção de UI: Modal de Lançar Notas
+
+#### Problema:
+O modal de lançamento de notas não estava centralizado corretamente.
+
+#### Solução Aplicada:
+Atualizado o CSS do modal em `lancar_notas.html`:
+
+**Antes:**
+```css
+.modal { position: fixed; ... }
+.modal-content { margin: 10% auto; ... }
+```
+
+**Depois:**
+```css
+.modal {
+    position: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-box {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+```
+
+#### Melhorias:
+- ✅ Flexbox para centralização
+- ✅ Variáveis CSS para cores (compatível com tema)
+- ✅ Box-shadow para profundidade
+- ✅ Botão de fechar com ícone
+
+#### Validação:
+- ✅ Página retorna 200
+
+---
+
+### 📅 13/04/2026 - Correção de UI: Modal de Lançar Notas (v2)
+
+#### Problema:
+Modal de notas ainda não estava perfeitamente centralizado e responsivo.
+
+#### Solução Aplicada:
+CSS atualizado com melhores práticas:
+
+```css
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);  /* Efeito de desfoque */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.modal-box {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: modalFadeIn 0.2s ease-out;
+}
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+```
+
+#### Melhorias:
+- ✅ `backdrop-filter: blur()` para efeito visual moderno
+- ✅ `max-height: 90vh` + `overflow-y: auto` para telas pequenas
+- ✅ `padding: 20px` no container para evitar overflow
+- ✅ `box-sizing: border-box` para cálculos corretos
+- ✅ Animação `modalFadeIn` para transição suave
+
+#### Validação:
+- ✅ Status 200
+
+---
+
+### 📅 13/04/2026 - Correção de UI: Modal de Notas (v3 - Final)
+
+#### Problema:
+Modal de notas não estava centralizado corretamente em diferentes tamanhos de tela.
+
+#### Solução Aplicada:
+CSS com Flexbox + Media Query para responsividade:
+
+```css
+.modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.modal-box {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    animation: modalFadeIn 0.2s ease-out;
+}
+/* Responsividade para mobile */
+@media (max-width: 480px) {
+    .modal-box {
+        max-width: 100%;
+        padding: 16px;
+    }
+}
+```
+
+#### Melhorias:
+- ✅ Flexbox para centralização perfeita
+- ✅ `backdrop-filter` para overlay moderno
+- ✅ `max-height: 90vh` para telas pequenas
+- ✅ Media query `@media (max-width: 480px)` para mobile
+- ✅ Animação suave de entrada
+
+#### Validação:
+- ✅ Status 200
+
+---
+
 ### 📅 13/04/2026 - Correção: Página de Detalhes da Matéria
 
 #### Problema:
@@ -14,7 +327,7 @@ A página de detalhes de cada matéria não estava exibindo corretamente:
 
 #### Causa Raiz:
 1. **Controller usava objeto antigo**: O `materias_controller.py` usava `_dict_to_materia_obj()` que criava um objeto artificial sem os relacionamentos
-2. **Textos incorretos**: "Turmas que têm Esta Matéria" e "Nenhuma turma associée a esta matéria"
+2. **Textos incorretos**: "Turmas que têm Esta Matéria" e "Nenhuma turma associée a esta matéria."
 
 #### Correções Aplicadas:
 
@@ -43,6 +356,148 @@ materia = Materia.query.get(id)
 - ✅ Professores exibidos na tabela
 - ✅ Turmas exibidas na tabela
 - ✅ Mensagens amigáveis quando vazio
+
+---
+
+### 📅 13/04/2026 - Correção: Visualização do Calendário (Mês/Semana/Dia)
+
+#### Problema:
+Os botões de visualização do calendário (Mês/Semana/Dia) não alternavam corretamente entre os modos.
+
+#### Causa Raiz:
+O JavaScript não chamava `renderCalendar()` após alterar o `currentView`, mantendo sempre a visualização mensal.
+
+#### Correções Aplicadas:
+
+**1. `calendario/index.html`** - JavaScript corrigido:
+```javascript
+// Antes (incorreto):
+document.querySelectorAll('.calendar-view-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        currentView = this.dataset.view;
+    });
+});
+
+// Depois (correto):
+document.querySelectorAll('.calendar-view-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        currentView = this.dataset.view;
+        renderCalendar();  // ← Adicionado
+    });
+});
+```
+
+**2. Implementadas 3 visualizações funcionais**:
+
+| Visualização | Descrição |
+|--------------|------------|
+| **Mês** | Grade mensal com dias e eventos resumidos |
+| **Semana** | Grade semanal com dias e horários (7h-22h) |
+| **Dia** | Lista de eventos do dia específico |
+
+**3. Navegação adaptada por visualização**:
+- **Mês**: Botões avançam/retrocedem um mês
+- **Semana**: Botões avançam/retrocedem uma semana
+- **Dia**: Botões avançam/retrocedem um dia
+
+**4. API de eventos adaptada**: O endpoint `/calendario/api/eventos` agora recebe os parâmetros `inicio` e `fim` corretos conforme a visualização.
+
+**5. Estilos CSS adicionados**:
+- `.calendar-week-view`: Grade semanal
+- `.calendar-day-view`: Visualização diária
+
+#### Validação:
+- ✅ Rota `/calendario/` retorna status 200
+- ✅ Botões alternam visualização corretamente
+- ✅ Navegação funciona para todos os modos
+- ✅ Eventos carregados conforme período
+
+---
+
+### 📅 13/04/2026 - Correção: Geração de Calendário Acadêmico
+
+#### Problema:
+Erro ao gerar calendário acadêmico. O sistema não criava aulas e retornava `total_aulas: 0`.
+
+#### Causas Raiz Identificadas:
+
+1. **Conversão de data no repositório**: O `AulaRepository.create()` não convertia string de data para objeto date.
+
+2. **Formato dos dados de matéria**: O gerador esperava estrutura aninhada mas repository retorna matéria direta.
+
+3. **Lógica de datas**: As datas não eram passadas corretamente para `gerar_para_periodo_customizado`.
+
+#### Validação:
+- ✅ Geração de calendário cria aulas corretamente
+
+---
+
+### 📅 13/04/2026 - Novo Sistema de Notas e Atividades
+
+#### Problema Anterior:
+- Notas não organizadas corretamente
+- Falta separação por ano e matéria
+- Não havia estrutura de atividades
+
+#### Nova Estrutura Implementada:
+
+**1. Modelo `Atividade` (`app/models/atividade.py`)**:
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | INTEGER | PK |
+| nome | VARCHAR(100) | Nome da atividade |
+| descricao | TEXT | Descrição |
+| data | DATE | Data da atividade |
+| materia_id | INTEGER | FK matéria |
+| turma_id | INTEGER | FK turma |
+| professor_id | INTEGER | FK professor |
+| tipo | VARCHAR(30) | prova/trabalho/exercicio/participacao/projeto |
+| peso | FLOAT | Peso (default 1.0) |
+| valor_maximo | FLOAT | Valor máximo (default 10.0) |
+
+**2. Modelo `Nota` atualizado**:
+- Adicionado `atividade_id` - FK para Atividade
+- Adicionado `ano_letivo` - INTEGER (ano das notas)
+- Adicionado `materia_id` - FK matéria
+
+**3. Hierarquia de Exibição**:
+```
+Ano Letivo (2026)
+ └── Matemática
+     ├── Atividade 1: Nota 8.0
+     ├── Atividade 2: Nota 7.5
+     └── Média: 7.75
+ └── Português
+     └── ...
+```
+
+**4. Repositório `AtividadeRepository`**:
+- `get_by_turma()` - Buscar atividades por turma
+- `get_by_turma_materia()` - Buscar por turma e matéria
+- `get_by_professor()` - Atividades do professor
+- `create()`, `update()`, `delete()` - CRUD completo
+
+**5. Controller de Atividades**:
+- `GET /atividades/turma/<id>` - Lista atividades
+- `GET /atividades/turma/<id>/novo` - Criar atividade
+- `GET /atividades/<id>/lancar-notas` - Lançar notas
+- `POST /atividades/<id>/lancar-notas` - Salvar nota (API)
+
+**6. Interface de Turmas**:
+- Botão "Cadastrar Atividade" 
+- Botão "Ver Atividades"
+
+**7. Interface de Alunos**:
+- Exibição de notas organizada por:
+  - Ano letivo
+  - Matéria
+  - Lista de atividades com notas
+  - Média calculada por matéria
+
+#### Validação:
+- ✅ Página de atividades retorna 200
+- ✅ Página de detalhe do aluno retorna 200
+- ✅ Banco atualizado com novas colunas
 
 ---
 
@@ -1026,5 +1481,55 @@ Email: joao@escola.com
 Senha: 1234
 Tipo: diretora (acesso total)
 ```
+
+---
+
+### 📅 13/04/2026 - Correção de UI: Modal de Notas (v4 - Final)
+
+#### Problema:
+Modal de notas não estava centralizado corretamente e faltavam funcionalidades de usabilidade.
+
+#### Solução Aplicada:
+
+**1. Centralização com Flexbox:**
+```css
+.modal {
+    position: fixed;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+```
+
+**2. Fechar ao clicar fora:**
+```html
+<div id="notaModal" onclick="fecharModalOutside(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+```
+
+```javascript
+function fecharModalOutside(event) {
+    if (event.target.id === 'notaModal') {
+        fecharModal();
+    }
+}
+```
+
+**3. Acessibilidade:**
+```html
+<button class="modal-close" onclick="fecharModal()" aria-label="Fechar">
+```
+
+#### Melhorias:
+- ✅ Flexbox com `height: 100vh` para centralização perfeita
+- ✅ Fechar ao clicar no overlay (fora do modal)
+- ✅ `event.stopPropagation()` impede cierre ao clicar no conteúdo
+- ✅ `aria-label` para acessibilidade
+- ✅ Botão de fechar com ícone
+
+#### Validação:
+- ✅ Todas as checagens passaram
 
 ---

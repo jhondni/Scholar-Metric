@@ -73,6 +73,7 @@ def create_app(config_name='default'):
         from app.controllers.configuracoes_controller import configuracoes_bp
         from app.controllers.analise_controller import analise_bp
         from app.controllers.materias_controller import materias_bp
+        from app.controllers.atividades_controller import atividades_bp
         
         app.register_blueprint(auth_bp)
         app.register_blueprint(dashboard_bp)
@@ -84,6 +85,7 @@ def create_app(config_name='default'):
         app.register_blueprint(configuracoes_bp)
         app.register_blueprint(analise_bp)
         app.register_blueprint(materias_bp)
+        app.register_blueprint(atividades_bp)
         _log("Blueprints registrados com sucesso")
         
         # Registrar handlers de erro

@@ -113,6 +113,8 @@ class AulaRepository:
                     if key in ('horario_inicio', 'horario_fim') and isinstance(value, str):
                         parts = value.split(':')
                         value = time(int(parts[0]), int(parts[1]))
+                    elif key == 'data' and isinstance(value, str):
+                        value = datetime.strptime(value, '%Y-%m-%d').date()
                     setattr(aula, key, value)
             
             db.session.add(aula)
@@ -135,6 +137,8 @@ class AulaRepository:
                     if key in ('horario_inicio', 'horario_fim') and isinstance(value, str):
                         parts = value.split(':')
                         value = time(int(parts[0]), int(parts[1]))
+                    elif key == 'data' and isinstance(value, str):
+                        value = datetime.strptime(value, '%Y-%m-%d').date()
                     setattr(aula, key, value)
             
             db.session.commit()

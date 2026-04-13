@@ -349,9 +349,9 @@ class GeradorCalendarioAcademico:
             
             # Para cada matéria da turma
             for materia_info in materias_data:
-                materia = materia_info.get('materias', {})
-                materia_id = materia.get('id')
-                materia_nome = materia.get('nome', 'N/A')
+                # O repository retorna matéria direta, não aninhada
+                materia_id = materia_info.get('id')
+                materia_nome = materia_info.get('nome', 'N/A')
                 
                 if not materia_id:
                     continue
@@ -369,12 +369,16 @@ class GeradorCalendarioAcademico:
                 
                 # Tentar cada horário até encontrar um disponível
                 for h_inicio, h_fim in horarios:
+                    # Converter time para string
+                    h_inicio_str = h_inicio.strftime('%H:%M:%S') if hasattr(h_inicio, 'strftime') else str(h_inicio)
+                    h_fim_str = h_fim.strftime('%H:%M:%S') if hasattr(h_fim, 'strftime') else str(h_fim)
+                    
                     # Verificar conflito de turma
-                    if self.verificar_conflito_turma(turma_id, data_atual, h_inicio, h_fim):
+                    if self.verificar_conflito_turma(turma_id, data_atual, h_inicio_str, h_fim_str):
                         continue
                     
                     # Verificar conflitos de alunos com outras turmas
-                    if self.verificar_conflito_alunos(turma_id, data_atual, h_inicio, h_fim, turmas_alunos):
+                    if self.verificar_conflito_alunos(turma_id, data_atual, h_inicio_str, h_fim_str, turmas_alunos):
                         continue
                     
                     # Encontrar professor disponível
@@ -383,7 +387,6 @@ class GeradorCalendarioAcademico:
                     )
                     
                     if not professor:
-                        # Nenhum professor disponível para esta matéria/horário
                         continue
                     
                     # Verificar novamente conflito para o professor específico
@@ -483,9 +486,12 @@ class GeradorCalendarioAcademico:
             Dict: Resultado da geração
         """
         try:
+            # ATENÇÃO: Definir datas ANTES de chamar distribute
+            # O gerador foi criado no construtor com datas default
             self.data_inicio = data_inicio
             self.data_fim = data_fim
             
+            # Buscar dados da turma
             turma = self._turma_repo.get_by_id(turma_id)
             if not turma:
                 return {'success': False, 'error': 'Turma não encontrada'}
@@ -494,6 +500,7 @@ class GeradorCalendarioAcademico:
             alunos = self._turma_repo.get_alunos(turma_id)
             turmas_alunos = {turma_id: [a.get('id') for a in alunos]}
             
+            # Chamar distribuir com as datas corretas
             return self.distribuir_aulas_turma(turma, turmas_alunos)
         except Exception as e:
             print(f"[ERRO] gerar_para_periodo_customizado: {e}")
@@ -519,10 +526,19 @@ def gerar_calendario_avancado(turma_id: Optional[int] = None,
     try:
         gerador = GeradorCalendarioAcademico(periodo)
         
+        # Definir datas primeiro, ANTES de chamar qualquer método
         if data_inicio and data_fim:
             gerador.data_inicio = data_inicio
             gerador.data_fim = data_fim
+            if turma_id:
+                # turma_id + datas específicas = gerar apenas essa turma
+                return gerador.gerar_para_periodo_customizado(turma_id, gerador.data_inicio, gerador.data_fim)
+            else:
+                # apenas datas = gerar todas as turmas no período
+                return gerador.gerar_para_todas_turmas()
         elif turma_id:
+            # Sem datas específicas - usar período default (90/180/365 dias)
+            gerador._definir_periodo_datas()
             return gerador.gerar_para_periodo_customizado(turma_id, gerador.data_inicio, gerador.data_fim)
         
         return gerador.gerar_para_todas_turmas()

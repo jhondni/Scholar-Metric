@@ -78,6 +78,29 @@ class NotaRepository:
         notas = Nota.query.filter_by(turma_id=turma_id, bimestre=bimestre).all()
         return [n.to_dict() for n in notas]
     
+    def get_by_atividade(self, atividade_id: int) -> List[Dict]:
+        """Busca notas de uma atividade."""
+        notas = Nota.query.filter_by(atividade_id=atividade_id).order_by(Nota.aluno_id).all()
+        return [n.to_dict() for n in notas]
+    
+    def get_by_aluno_atividade(self, aluno_id: int, atividade_id: int) -> Optional[Dict]:
+        """Busca nota de um aluno em uma atividade específica."""
+        nota = Nota.query.filter_by(aluno_id=aluno_id, atividade_id=atividade_id).first()
+        return nota.to_dict() if nota else None
+    
+    def get_by_aluno_ano(self, aluno_id: int, ano_letivo: int) -> List[Dict]:
+        """Busca notas de um aluno em um ano letivo."""
+        notas = Nota.query.filter_by(aluno_id=aluno_id, ano_letivo=ano_letivo).all()
+        return [n.to_dict() for n in notas]
+    
+    def get_by_aluno_materia(self, aluno_id: int, materia_id: int, ano_letivo: int = None) -> List[Dict]:
+        """Busca notas de um aluno em uma matéria."""
+        query = Nota.query.filter_by(aluno_id=aluno_id, materia_id=materia_id)
+        if ano_letivo:
+            query = query.filter_by(ano_letivo=ano_letivo)
+        notas = query.all()
+        return [n.to_dict() for n in notas]
+    
     def create(self, data: Dict) -> Optional[Dict]:
         """Cria uma nova nota."""
         try:

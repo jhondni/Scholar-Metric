@@ -18,7 +18,15 @@ class Nota(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     aluno_id = db.Column(db.Integer, db.ForeignKey('alunos.id'), nullable=False)
     turma_id = db.Column(db.Integer, db.ForeignKey('turmas.id'), nullable=False)
+    atividade_id = db.Column(db.Integer, db.ForeignKey('atividades.id'), nullable=True)
     aula_id = db.Column(db.Integer, db.ForeignKey('aulas.id'), nullable=True)
+    
+    # Ano letivo
+    ano_letivo = db.Column(db.Integer, nullable=False)
+    materia_id = db.Column(db.Integer, db.ForeignKey('materias.id'), nullable=True)
+    
+    # Relacionamentos
+    materia = db.relationship('Materia', backref='notas')
     
     # Avaliação
     tipo_avaliacao = db.Column(db.String(30), nullable=False)
@@ -45,7 +53,10 @@ class Nota(db.Model):
             'id': self.id,
             'aluno_id': self.aluno_id,
             'turma_id': self.turma_id,
+            'atividade_id': self.atividade_id,
             'aula_id': self.aula_id,
+            'ano_letivo': self.ano_letivo,
+            'materia_id': self.materia_id,
             'tipo_avaliacao': self.tipo_avaliacao,
             'descricao': self.descricao,
             'valor': self.valor,

@@ -147,13 +147,118 @@ def novo():
 @login_required
 def detalhe(id):
     """Detalhes do aluno."""
+    from datetime import date
+    from app.repositories import NotaRepository, MateriaRepository
+    
     aluno_data = _aluno_repo.get_by_id(id)
     if not aluno_data:
         flash('Aluno não encontrado', 'error')
         return redirect(url_for('alunos.index'))
     
+    # Buscar notas por ano
+    nota_repo = NotaRepository()
+    materia_repo = MateriaRepository()
+    
+    notas = nota_repo.get_by_aluno(id)
+    
+    # DEBUG: print raw notes
+    print(f"[DEBUG] Total notas: {len(notas)}")
+    for n in notas[:3]:
+        print(f"[DEBUG] Nota: aluno={n.get('aluno_id')}, ano={n.get('ano_letivo')}, materia_id={n.get('materia_id')}, valor={n.get('valor')}")
+    
+    # Organizar por ano e matéria
+    notas_por_ano = {}
+    atividade_repo = None
+    
+    for nota in notas:
+        ano = nota.get('ano_letivo', date.today().year)
+        materia_id = nota.get('materia_id')
+        
+        # Fallback: get materia_id from atividade if not set on nota
+        if not materia_id and nota.get('atividade_id'):
+            if not atividade_repo:
+                from app.repositories import AtividadeRepository
+                atividade_repo = AtividadeRepository()
+            atividade = atividade_repo.get_by_id(nota['atividade_id'])
+            if atividade:
+                materia_id = atividade.get('materia_id')
+        
+        print(f"[DEBUG] Processing: ano={ano}, materia_id={materia_id}")
+        
+        if ano not in notas_por_ano:
+            notas_por_ano[ano] = {}
+        
+        if materia_id:
+            if materia_id not in notas_por_ano[ano]:
+                materia = materia_repo.get_by_id(materia_id)
+                materia_nome = materia.get('nome', 'Matéria') if materia else 'Matéria'
+                print(f"[DEBUG] Created materia entry: {materia_nome}")
+                notas_por_ano[ano][materia_id] = {
+                    'materia_nome': materia_nome,
+                    'atividades': [],
+                    'soma_notas': 0,
+                    'count': 0
+                }
+            
+            # Buscar atividade se houver
+            atividade_info = None
+            if nota.get('atividade_id'):
+                from app.repositories import AtividadeRepository
+                at_repo = AtividadeRepository()
+                atividade = at_repo.get_by_id(nota['atividade_id'])
+                if atividade:
+                    atividade_info = {
+                        'nome': atividade.get('nome', ''),
+                        'data': str(atividade.get('data', '')),
+                        'tipo': atividade.get('tipo', ''),
+                        'nota': nota.get('valor', 0)
+                    }
+            
+            notas_por_ano[ano][materia_id]['atividades'].append(atividade_info or {
+                'nome': nota.get('descricao', 'Avaliação'),
+                'data': '-',
+                'tipo': nota.get('tipo_avaliacao', ''),
+                'nota': nota.get('valor', 0)
+            })
+            
+            notas_por_ano[ano][materia_id]['soma_notas'] += nota.get('valor', 0)
+            notas_por_ano[ano][materia_id]['count'] += 1
+    
+    # Calcular médias
+    for ano in notas_por_ano:
+        for materia_id in notas_por_ano[ano]:
+            dados = notas_por_ano[ano][materia_id]
+            if dados['count'] > 0:
+                dados['media'] = dados['soma_notas'] / dados['count']
+            else:
+                dados['media'] = 0
+    
+    # Buscar matérias do aluno (para aba Turmas)
+    from app.repositories import ProfessorRepository
+    professor_repo = ProfessorRepository()
+    
+    # Criar DTO do aluno antes de usar (necessário para calcular frequência)
     aluno = AlunoDTO(aluno_data, _repos)
-    return render_template('alunos/detalhe.html', aluno=aluno)
+    
+    materias_do_aluno = []
+    ano_atual = date.today().year
+    
+    if ano_atual in notas_por_ano:
+        for materia_id, dados in notas_por_ano[ano_atual].items():
+            materia = materia_repo.get_by_id(materia_id)
+            if materia:
+                profes = professor_repo.get_by_materia(materia_id)
+                professor_nome = profes[0].get('nome', 'Não atribuído') if profes else 'Não atribuído'
+                
+                materias_do_aluno.append({
+                    'codigo': materia.get('codigo', ''),
+                    'materia_nome': dados['materia_nome'],
+                    'professor_nome': professor_nome,
+                    'media': dados.get('media', 0),
+                    'frequencia': aluno.percentual_frequencia()
+                })
+    
+    return render_template('alunos/detalhe.html', aluno=aluno, notas_por_ano=notas_por_ano, materias_do_aluno=materias_do_aluno)
 
 
 @alunos_bp.route('/<int:id>/editar', methods=['GET', 'POST'])

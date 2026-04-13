@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Lançar Notas - Analitcs School{% endblock %}
+{% block page_title %}Lançar Notas: {{ atividade.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-3">
+    <div>
+        <span class="badge badge-primary">{{ atividade.tipo }}</span>
+        <span class="badge badge-info">Valor máximo: {{ atividade.valor_maximo }}</span>
+        <span class="badge badge-info">Peso: {{ atividade.peso }}</span>
+    </div>
+    <a href="{{ url_for('turmas.detalhe', id=atividade.turma_id) }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">{{ atividade.nome }}</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>Data:</strong> {{ atividade.data }}</p>
+        <p><strong>Matéria:</strong> {{ materia.nome if materia else atividade.materia_id }}</p>
+        <p><strong>Descrição:</strong> {{ atividade.descricao or '-' }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Notas dos Alunos</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Matrícula</th>
+                        <th>Nota</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for aluno in alunos %}
+                    <tr>
+                        <td>{{ aluno.nome }}</td>
+                        <td>{{ aluno.matricula }}</td>
+                        <td>
+                            {% if notas and notas[aluno.id] %}
+                            <span class="badge badge-success">{{ notas[aluno.id].valor }}</span>
+                            {% else %}
+                            <span class="badge badge-warning">Não lançado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="abrirNota({{ aluno.id }}, '{{ aluno.nome }}', {{ notas[aluno.id].valor if notas and notas[aluno.id] else 0 }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para lançar/editarr nota -->
+{% set csrf_token = csrf_token() if csrf_token else '' %}
+<div id="notaModal" class="modal" style="display: none;" onclick="fecharModalOutside(event)" data-csrf="{{ csrf_token }}">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Lançar Nota</h3>
+            <button class="modal-close" onclick="fecharModal()" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="alunoNome"></p>
+            <div class="form-group">
+                <label for="notaInput">Nota (0 - {{ atividade.valor_maximo }}):</label>
+                <input type="number" id="notaInput" class="form-control" step="0.1" min="0" max="{{ atividade.valor_maximo }}">
+            </div>
+            <input type="hidden" id="alunoId">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="salvarNota()">Salvar</button>
+            <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.modal-box {
+    position: relative;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    animation: modalFadeIn 0.2s ease-out;
+}
+@media (max-width: 480px) {
+    .modal-box {
+        max-width: 100%;
+        max-height: 85vh;
+        padding: 16px;
+    }
+}
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    color: var(--text-muted);
+    font-size: 1.25rem;
+}
+.modal-close:hover {
+    color: var(--text-primary);
+}
+.modal-body {
+    margin-bottom: 15px;
+}
+.modal-body p {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+</style>
+
+<script>
+function abrirNota(alunoId, alunoNome, notaAtual) {
+    document.getElementById('alunoId').value = alunoId;
+    document.getElementById('alunoNome').textContent = 'Aluno: ' + alunoNome;
+    document.getElementById('notaInput').value = notaAtual || '';
+    document.getElementById('notaModal').style.display = 'block';
+}
+
+function fecharModal() {
+    document.getElementById('notaModal').style.display = 'none';
+}
+
+function fecharModalOutside(event) {
+    if (event.target.id === 'notaModal') {
+        fecharModal();
+    }
+}
+
+function salvarNota() {
+    const alunoId = document.getElementById('alunoId').value;
+    const valor = parseFloat(document.getElementById('notaInput').value);
+    const notaMax = {{ atividade.valor_maximo }};
+    
+    if (isNaN(valor) || valor < 0) {
+        alert('Nota inválida');
+        return;
+    }
+    
+    if (valor > notaMax) {
+        alert('Nota não pode ser maior que ' + notaMax);
+        return;
+    }
+    
+    const btn = document.querySelector('.modal-footer .btn-primary');
+    const modal = document.getElementById('notaModal');
+    const csrfToken = modal.dataset.csrf || '';
+    
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    
+    fetch('/atividades/{{ atividade.id }}/lancar-notas', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ aluno_id: parseInt(alunoId), valor: valor })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Erro ao salvar');
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        alert('Erro ao salvar nota. Tente novamente.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = 'Salvar';
+    });
+}
+</script>
+{% endblock %}

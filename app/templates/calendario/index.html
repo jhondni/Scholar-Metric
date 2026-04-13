@@ -55,6 +55,29 @@
 .calendar-day-number { font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
 .calendar-day.today .calendar-day-number { background: var(--primary); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .calendar-event { font-size: 0.625rem; padding: 0.25rem 0.5rem; border-radius: 4px; color: white; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Week View */
+.calendar-week-view { overflow-x: auto; }
+.calendar-week-grid { min-width: 800px; }
+.calendar-week-header-row { display: grid; grid-template-columns: 60px repeat(7, 1fr); border-bottom: 1px solid var(--border-color); }
+.calendar-time-column { padding: 0.5rem; font-weight: bold; }
+.calendar-week-day-header { text-align: center; padding: 0.5rem; border-left: 1px solid var(--border-color); }
+.calendar-week-day-header.today { background: rgba(79,70,229,0.1); }
+.calendar-week-day-header .day-name { font-size: 0.75rem; color: var(--text-muted); }
+.calendar-week-day-header .day-number { font-size: 1.25rem; font-weight: 600; }
+.calendar-week-row { display: grid; grid-template-columns: 60px repeat(7, 1fr); border-bottom: 1px solid var(--border-color); min-height: 50px; }
+.calendar-time-cell { padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--text-muted); border-right: 1px solid var(--border-color); }
+.calendar-week-cell { border-left: 1px solid var(--border-color); position: relative; min-height: 50px; }
+.week-event { padding: 0.25rem; font-size: 0.625rem; border-radius: 2px; color: white; margin: 1px; white-space: nowrap; overflow: hidden; }
+
+/* Day View */
+.calendar-day-view { max-width: 800px; margin: 0 auto; }
+.calendar-day-header { font-size: 1.25rem; font-weight: 600; text-align: center; padding: 1rem; border-bottom: 1px solid var(--border-color); }
+.calendar-day-grid { border: 1px solid var(--border-color); border-radius: 4px; }
+.calendar-day-row { display: grid; grid-template-columns: 60px 1fr; border-bottom: 1px solid var(--border-color); min-height: 60px; }
+.calendar-day-row:last-child { border-bottom: none; }
+.calendar-day-cell { border-left: 1px solid var(--border-color); position: relative; }
+.day-event { padding: 0.5rem; font-size: 0.75rem; border-radius: 4px; color: white; margin: 2px; }
 </style>
 {% endblock %}
 
@@ -64,28 +87,64 @@ let currentDate = new Date();
 let currentView = 'month';
 
 const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const dayNames = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 
 function renderCalendar() {
+    document.getElementById('calendarTitle').textContent = getTitle();
+    
+    switch(currentView) {
+        case 'week':
+            renderWeekView();
+            break;
+        case 'day':
+            renderDayView();
+            break;
+        default:
+            renderMonthView();
+    }
+    
+    loadEvents();
+}
+
+function getTitle() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
-    document.getElementById('calendarTitle').textContent = `${monthNames[month]} ${year}`;
+    if (currentView === 'week') {
+        const startOfWeek = getStartOfWeek(currentDate);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        return `${startOfWeek.getDate()} ${monthNames[startOfWeek.getMonth()]} - ${endOfWeek.getDate()} ${monthNames[endOfWeek.getMonth()]} ${year}`;
+    } else if (currentView === 'day') {
+        return `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} de ${monthNames[month]} de ${year}`;
+    }
+    return `${monthNames[month]} ${year}`;
+}
+
+function getStartOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    return d;
+}
+
+function renderMonthView() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
     
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startDay = firstDay.getDay();
     const totalDays = lastDay.getDate();
-    
     const prevLastDay = new Date(year, month, 0).getDate();
     
     let html = '<div class="calendar-body">';
     
-    // Dias do mês anterior
     for (let i = startDay - 1; i >= 0; i--) {
         html += `<div class="calendar-day other-month"><div class="calendar-day-number">${prevLastDay - i}</div></div>`;
     }
     
-    // Dias do mês atual
     const today = new Date();
     for (let day = 1; day <= totalDays; day++) {
         const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
@@ -93,7 +152,6 @@ function renderCalendar() {
         html += `<div class="calendar-day ${isToday ? 'today' : ''}" data-date="${dateStr}"><div class="calendar-day-number">${day}</div><div class="calendar-events" id="events-${dateStr}"></div></div>`;
     }
     
-    // Dias do próximo mês
     const remaining = 42 - (startDay + totalDays);
     for (let i = 1; i <= remaining; i++) {
         html += `<div class="calendar-day other-month"><div class="calendar-day-number">${i}</div></div>`;
@@ -101,39 +159,165 @@ function renderCalendar() {
     
     html += '</div>';
     document.getElementById('calendarDays').innerHTML = html;
+}
+
+function renderWeekView() {
+    const startOfWeek = getStartOfWeek(currentDate);
+    let html = '<div class="calendar-week-view">';
+    html += '<div class="calendar-week-grid">';
     
-    loadEvents();
+    // Cabeçalho com dias da semana
+    html += '<div class="calendar-week-header-row">';
+    html += '<div class="calendar-time-column"></div>';
+    for (let i = 0; i < 7; i++) {
+        const day = new Date(startOfWeek);
+        day.setDate(startOfWeek.getDate() + i);
+        const isToday = day.toDateString() === new Date().toDateString();
+        html += `<div class="calendar-week-day-header ${isToday ? 'today' : ''}">
+            <div class="day-name">${weekDays[i]}</div>
+            <div class="day-number">${day.getDate()}</div>
+        </div>`;
+    }
+    html += '</div>';
+    
+    // Grade de horários (7h às 22h)
+    for (let hour = 7; hour <= 22; hour++) {
+        html += '<div class="calendar-week-row">';
+        html += `<div class="calendar-time-cell">${String(hour).padStart(2,'0')}:00</div>`;
+        
+        for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+            const day = new Date(startOfWeek);
+            day.setDate(startOfWeek.getDate() + dayIdx);
+            const dateStr = day.toISOString().split('T')[0];
+            html += `<div class="calendar-week-cell" data-date="${dateStr}" data-hour="${hour}">
+                <div class="week-events" id="week-events-${dateStr}-${hour}"></div>
+            </div>`;
+        }
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    html += '</div>';
+    document.getElementById('calendarDays').innerHTML = html;
+}
+
+function renderDayView() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const day = currentDate.getDate();
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    
+    let html = '<div class="calendar-day-view">';
+    html += `<div class="calendar-day-header">${dayNames[currentDate.getDay()]} - ${day} de ${monthNames[month]} de ${year}</div>`;
+    html += '<div class="calendar-day-grid">';
+    
+    for (let hour = 7; hour <= 22; hour++) {
+        html += `<div class="calendar-day-row">`;
+        html += `<div class="calendar-time-cell">${String(hour).padStart(2,'0')}:00</div>`;
+        html += `<div class="calendar-day-cell" data-date="${dateStr}" data-hour="${hour}">
+            <div class="day-events" id="day-events-${dateStr}-${hour}"></div>
+        </div>`;
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    html += '</div>';
+    document.getElementById('calendarDays').innerHTML = html;
 }
 
 async function loadEvents() {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const inicio = `${year}-${String(month+1).padStart(2,'0')}-01`;
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const fim = `${year}-${String(month+1).padStart(2,'0')}-${lastDay}`;
+    let inicio, fim;
+    
+    if (currentView === 'week') {
+        const startOfWeek = getStartOfWeek(currentDate);
+        inicio = startOfWeek.toISOString().split('T')[0];
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        fim = endOfWeek.toISOString().split('T')[0];
+    } else if (currentView === 'day') {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const day = currentDate.getDate();
+        inicio = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        fim = inicio;
+    } else {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        inicio = `${year}-${String(month+1).padStart(2,'0')}-01`;
+        fim = `${year}-${String(month+1).padStart(2,'0')}-${lastDay}`;
+    }
     
     const response = await fetch(`/calendario/api/eventos?inicio=${inicio}&fim=${fim}`);
     const eventos = await response.json();
     
-    eventos.forEach(evento => {
-        const container = document.getElementById(`events-${evento.start.split('T')[0]}`);
-        if (container) {
-            const el = document.createElement('div');
-            el.className = 'calendar-event';
-            el.style.backgroundColor = evento.color;
-            el.textContent = evento.title;
-            container.appendChild(el);
-        }
-    });
+    if (currentView === 'month') {
+        eventos.forEach(evento => {
+            const container = document.getElementById(`events-${evento.start.split('T')[0]}`);
+            if (container) {
+                const el = document.createElement('div');
+                el.className = 'calendar-event';
+                el.style.backgroundColor = evento.color;
+                el.textContent = evento.title;
+                container.appendChild(el);
+            }
+        });
+    } else if (currentView === 'week') {
+        eventos.forEach(evento => {
+            const startDate = evento.start.split('T')[0];
+            const startHour = parseInt(evento.start.split('T')[1]?.split(':')[0] || '0');
+            
+            let container;
+            if (currentView === 'week') {
+                container = document.getElementById(`week-events-${startDate}-${startHour}`);
+            } else {
+                container = document.getElementById(`day-events-${startDate}-${startHour}`);
+            }
+            
+            if (container) {
+                const el = document.createElement('div');
+                el.className = currentView === 'week' ? 'week-event' : 'day-event';
+                el.style.backgroundColor = evento.color;
+                el.innerHTML = `<strong>${evento.title}</strong>`;
+                container.appendChild(el);
+            }
+        });
+    } else if (currentView === 'day') {
+        eventos.forEach(evento => {
+            const startDate = evento.start.split('T')[0];
+            const startHour = parseInt(evento.start.split('T')[1]?.split(':')[0] || '0');
+            const container = document.getElementById(`day-events-${startDate}-${startHour}`);
+            
+            if (container) {
+                const el = document.createElement('div');
+                el.className = 'day-event';
+                el.style.backgroundColor = evento.color;
+                el.innerHTML = `<strong>${evento.title}</strong>`;
+                container.appendChild(el);
+            }
+        });
+    }
 }
 
 document.getElementById('prevMonth').addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() - 1);
+    if (currentView === 'day') {
+        currentDate.setDate(currentDate.getDate() - 1);
+    } else if (currentView === 'week') {
+        currentDate.setDate(currentDate.getDate() - 7);
+    } else {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+    }
     renderCalendar();
 });
 
 document.getElementById('nextMonth').addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() + 1);
+    if (currentView === 'day') {
+        currentDate.setDate(currentDate.getDate() + 1);
+    } else if (currentView === 'week') {
+        currentDate.setDate(currentDate.getDate() + 7);
+    } else {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    }
     renderCalendar();
 });
 
@@ -142,6 +326,7 @@ document.querySelectorAll('.calendar-view-btn').forEach(btn => {
         document.querySelectorAll('.calendar-view-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         currentView = this.dataset.view;
+        renderCalendar();
     });
 });
 

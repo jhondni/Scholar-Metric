@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Analitcs School{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<form method="POST">
+    {{ form.hidden_tag() }}
+    
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">Dados da Atividade</h3>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-2">
+                <div class="form-group">
+                    {{ form.nome.label(class="form-label") }}
+                    {{ form.nome(class="form-control") }}
+                    {% if form.nome.errors %}
+                    <div class="text-error">{{ form.nome.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.data.label(class="form-label") }}
+                    {{ form.data(class="form-control", type="date") }}
+                    {% if form.data.errors %}
+                    <div class="text-error">{{ form.data.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.tipo.label(class="form-label") }}
+                    {{ form.tipo(class="form-control") }}
+                    {% if form.tipo.errors %}
+                    <div class="text-error">{{ form.tipo.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.materia_id.label(class="form-label") }}
+                    {{ form.materia_id(class="form-control") }}
+                    {% if form.materia_id.errors %}
+                    <div class="text-error">{{ form.materia_id.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.turma_id.label(class="form-label") }}
+                    {{ form.turma_id(class="form-control") }}
+                    {% if form.turma_id.errors %}
+                    <div class="text-error">{{ form.turma_id.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.peso.label(class="form-label") }}
+                    {{ form.peso(class="form-control") }}
+                    {% if form.peso.errors %}
+                    <div class="text-error">{{ form.peso.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.valor_maximo.label(class="form-label") }}
+                    {{ form.valor_maximo(class="form-control") }}
+                    {% if form.valor_maximo.errors %}
+                    <div class="text-error">{{ form.valor_maximo.errors[0] }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                {{ form.descricao.label(class="form-label") }}
+                {{ form.descricao(class="form-control", rows=3) }}
+                {% if form.descricao.errors %}
+                <div class="text-error">{{ form.descricao.errors[0] }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="{{ url_for('turmas.detalhe', id=turma_id or atividade.turma_id) }}" class="btn btn-outline">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

@@ -220,8 +220,7 @@
     .sidebar,
     .header,
     .btn,
-    .theme-toggle,
-    .notification-btn {
+    .theme-toggle {
         display: none !important;
     }
     

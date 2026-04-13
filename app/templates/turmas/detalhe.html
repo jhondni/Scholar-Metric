@@ -215,12 +215,26 @@
 <div class="card">
     <div class="card-header">
         <h3 class="card-title">Alunos da Turma</h3>
-        {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
-        <button class="btn btn-sm btn-primary" data-modal="modalAdicionarAluno">
-            <i class="fas fa-plus"></i>
-            Adicionar Aluno
-        </button>
-        {% endif %}
+        <div class="d-flex gap-2">
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <a href="{{ url_for('atividades.novo', turma_id=turma.id) }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus-circle"></i>
+                Cadastrar Atividade
+            </a>
+            {% endif %}
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <a href="{{ url_for('atividades.listar', turma_id=turma.id) }}" class="btn btn-sm btn-outline">
+                <i class="fas fa-clipboard-list"></i>
+                Ver Atividades
+            </a>
+            {% endif %}
+            {% if current_user.tem_permissao(['diretora', 'coordenacao']) %}
+            <button class="btn btn-sm btn-outline" data-modal="modalAdicionarAluno">
+                <i class="fas fa-plus"></i>
+                Adicionar Aluno
+            </button>
+            {% endif %}
+        </div>
     </div>
     <div class="card-body">
         {% if turma.alunos %}
