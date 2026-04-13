@@ -2,11 +2,12 @@
 app/repositories/base_repository.py - Repositório Base
 
 Classe base para todos os repositórios do sistema.
-Fornece operações CRUD genéricas via Supabase REST API.
+Fornece operações CRUD genéricas via SQLAlchemy ORM.
 """
 
-from typing import List, Dict, Optional, Any
-from app.services.supabase_client import get_supabase_client
+from typing import List, Optional, Any
+from sqlalchemy import desc
+from app import db
 
 
 class BaseRepository:
@@ -16,23 +17,36 @@ class BaseRepository:
     Todos os repositórios específicos herdam desta classe.
     """
     
-    def __init__(self, table_name: str, model_class=None):
+    model_class = None
+    
+    def __init__(self, table_name: str = None, model_class=None):
         """
         Inicializa o repositório.
         
         Args:
-            table_name: Nome da tabela no Supabase
-            model_class: Classe do modelo SQLAlchemy (opcional, para conversão)
+            table_name: Nome da tabela (para compatibilidade, não usado)
+            model_class: Classe do modelo SQLAlchemy
         """
-        self.table_name = table_name
-        self.model_class = model_class
+        if model_class is not None:
+            self.model_class = model_class
     
-    def _get_client(self):
-        """Retorna o cliente Supabase."""
-        return get_supabase_client()
+    def _to_dict(self, obj) -> Optional[dict]:
+        """Converte objeto SQLAlchemy para dicionário."""
+        if obj is None:
+            return None
+        if hasattr(obj, '__dict__'):
+            result = {}
+            for key in obj.__table__.columns.keys():
+                value = getattr(obj, key, None)
+                if hasattr(value, 'isoformat'):
+                    result[key] = value.isoformat()
+                else:
+                    result[key] = value
+            return result
+        return None
     
-    def get_all(self, filters: Dict = None, order_by: str = None, 
-                limit: int = None, offset: int = None) -> List[Dict]:
+    def get_all(self, filters: dict = None, order_by: str = None,
+                limit: int = None, offset: int = None) -> List[dict]:
         """
         Busca todos os registros com filtros opcionais.
         
@@ -43,22 +57,26 @@ class BaseRepository:
             offset: Offset para paginação
             
         Returns:
-            List[Dict]: Lista de registros
+            List[dict]: Lista de registros
         """
         try:
-            client = self._get_client()
-            query = client.table(self.table_name).select('*')
+            query = self.model_class.query
             
             if filters:
                 for key, value in filters.items():
                     if value is not None:
-                        query = query.eq(key, value)
+                        if hasattr(self.model_class, key):
+                            query = query.filter(getattr(self.model_class, key) == value)
             
             if order_by:
                 if order_by.startswith('-'):
-                    query = query.order(order_by[1:], desc=True)
+                    column = getattr(self.model_class, order_by[1:], None)
+                    if column:
+                        query = query.order_by(desc(column))
                 else:
-                    query = query.order(order_by)
+                    column = getattr(self.model_class, order_by, None)
+                    if column:
+                        query = query.order_by(column)
             
             if limit:
                 query = query.limit(limit)
@@ -66,13 +84,13 @@ class BaseRepository:
             if offset:
                 query = query.offset(offset)
             
-            result = query.execute()
-            return result.data if result.data else []
+            results = query.all()
+            return [self._to_dict(r) for r in results]
         except Exception as e:
-            print(f"[ERRO] get_all em {self.table_name}: {e}")
+            print(f"[ERRO] get_all em {self.model_class.__name__}: {e}")
             return []
     
-    def get_by_id(self, record_id: int) -> Optional[Dict]:
+    def get_by_id(self, record_id: int) -> Optional[dict]:
         """
         Busca um registro pelo ID.
         
@@ -80,17 +98,16 @@ class BaseRepository:
             record_id: ID do registro
             
         Returns:
-            Optional[Dict]: Registro encontrado ou None
+            Optional[dict]: Registro encontrado ou None
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).select('*').eq('id', record_id).execute()
-            return result.data[0] if result.data else None
+            result = self.model_class.query.get(record_id)
+            return self._to_dict(result)
         except Exception as e:
-            print(f"[ERRO] get_by_id em {self.table_name}: {e}")
+            print(f"[ERRO] get_by_id em {self.model_class.__name__}: {e}")
             return None
     
-    def get_by_field(self, field: str, value: Any) -> List[Dict]:
+    def get_by_field(self, field: str, value: Any) -> List[dict]:
         """
         Busca registros por um campo específico.
         
@@ -99,17 +116,19 @@ class BaseRepository:
             value: Valor a buscar
             
         Returns:
-            List[Dict]: Lista de registros encontrados
+            List[dict]: Lista de registros encontrados
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).select('*').eq(field, value).execute()
-            return result.data if result.data else []
+            column = getattr(self.model_class, field, None)
+            if column:
+                results = self.model_class.query.filter(column == value).all()
+                return [self._to_dict(r) for r in results]
+            return []
         except Exception as e:
-            print(f"[ERRO] get_by_field em {self.table_name}: {e}")
+            print(f"[ERRO] get_by_field em {self.model_class.__name__}: {e}")
             return []
     
-    def get_one_by_field(self, field: str, value: Any) -> Optional[Dict]:
+    def get_one_by_field(self, field: str, value: Any) -> Optional[dict]:
         """
         Busca um único registro por um campo específico.
         
@@ -118,17 +137,19 @@ class BaseRepository:
             value: Valor a buscar
             
         Returns:
-            Optional[Dict]: Registro encontrado ou None
+            Optional[dict]: Registro encontrado ou None
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).select('*').eq(field, value).limit(1).execute()
-            return result.data[0] if result.data else None
+            column = getattr(self.model_class, field, None)
+            if column:
+                result = self.model_class.query.filter(column == value).first()
+                return self._to_dict(result)
+            return None
         except Exception as e:
-            print(f"[ERRO] get_one_by_field em {self.table_name}: {e}")
+            print(f"[ERRO] get_one_by_field em {self.model_class.__name__}: {e}")
             return None
     
-    def create(self, data: Dict) -> Optional[Dict]:
+    def create(self, data: dict) -> Optional[dict]:
         """
         Cria um novo registro.
         
@@ -136,17 +157,22 @@ class BaseRepository:
             data: Dicionário com os dados do registro
             
         Returns:
-            Optional[Dict]: Registro criado ou None em caso de erro
+            Optional[dict]: Registro criado ou None em caso de erro
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).insert(data).execute()
-            return result.data[0] if result.data else None
+            instance = self.model_class()
+            for key, value in data.items():
+                if hasattr(instance, key):
+                    setattr(instance, key, value)
+            db.session.add(instance)
+            db.session.commit()
+            return self._to_dict(instance)
         except Exception as e:
-            print(f"[ERRO] create em {self.table_name}: {e}")
+            db.session.rollback()
+            print(f"[ERRO] create em {self.model_class.__name__}: {e}")
             return None
     
-    def update(self, record_id: int, data: Dict) -> Optional[Dict]:
+    def update(self, record_id: int, data: dict) -> Optional[dict]:
         """
         Atualiza um registro existente.
         
@@ -155,14 +181,20 @@ class BaseRepository:
             data: Dicionário com os dados a atualizar
             
         Returns:
-            Optional[Dict]: Registro atualizado ou None em caso de erro
+            Optional[dict]: Registro atualizado ou None em caso de erro
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).update(data).eq('id', record_id).execute()
-            return result.data[0] if result.data else None
+            instance = self.model_class.query.get(record_id)
+            if not instance:
+                return None
+            for key, value in data.items():
+                if hasattr(instance, key):
+                    setattr(instance, key, value)
+            db.session.commit()
+            return self._to_dict(instance)
         except Exception as e:
-            print(f"[ERRO] update em {self.table_name}: {e}")
+            db.session.rollback()
+            print(f"[ERRO] update em {self.model_class.__name__}: {e}")
             return None
     
     def delete(self, record_id: int) -> bool:
@@ -176,14 +208,18 @@ class BaseRepository:
             bool: True se deletado com sucesso
         """
         try:
-            client = self._get_client()
-            client.table(self.table_name).delete().eq('id', record_id).execute()
-            return True
+            instance = self.model_class.query.get(record_id)
+            if instance:
+                db.session.delete(instance)
+                db.session.commit()
+                return True
+            return False
         except Exception as e:
-            print(f"[ERRO] delete em {self.table_name}: {e}")
+            db.session.rollback()
+            print(f"[ERRO] delete em {self.model_class.__name__}: {e}")
             return False
     
-    def count(self, filters: Dict = None) -> int:
+    def count(self, filters: dict = None) -> int:
         """
         Conta registros com filtros opcionais.
         
@@ -194,18 +230,16 @@ class BaseRepository:
             int: Número de registros
         """
         try:
-            client = self._get_client()
-            query = client.table(self.table_name).select('id', count='exact')
+            query = self.model_class.query
             
             if filters:
                 for key, value in filters.items():
-                    if value is not None:
-                        query = query.eq(key, value)
+                    if value is not None and hasattr(self.model_class, key):
+                        query = query.filter(getattr(self.model_class, key) == value)
             
-            result = query.execute()
-            return result.count if result.count is not None else 0
+            return query.count()
         except Exception as e:
-            print(f"[ERRO] count em {self.table_name}: {e}")
+            print(f"[ERRO] count em {self.model_class.__name__}: {e}")
             return 0
     
     def exists(self, record_id: int) -> bool:
@@ -219,14 +253,12 @@ class BaseRepository:
             bool: True se existe
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).select('id').eq('id', record_id).limit(1).execute()
-            return len(result.data) > 0 if result.data else False
+            return self.model_class.query.get(record_id) is not None
         except Exception as e:
-            print(f"[ERRO] exists em {self.table_name}: {e}")
+            print(f"[ERRO] exists em {self.model_class.__name__}: {e}")
             return False
     
-    def upsert(self, data: Dict, on_conflict: str = 'id') -> Optional[Dict]:
+    def upsert(self, data: dict, on_conflict: str = 'id') -> Optional[dict]:
         """
         Insere ou atualiza um registro (UPSERT).
         
@@ -235,12 +267,27 @@ class BaseRepository:
             on_conflict: Campo para detectar conflito
             
         Returns:
-            Optional[Dict]: Registro criado/atualizado ou None
+            Optional[dict]: Registro criado/atualizado ou None
         """
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).upsert(data, on_conflict=on_conflict).execute()
-            return result.data[0] if result.data else None
+            conflict_id = data.get(on_conflict)
+            if conflict_id:
+                instance = self.model_class.query.get(conflict_id)
+                if instance:
+                    for key, value in data.items():
+                        if hasattr(instance, key):
+                            setattr(instance, key, value)
+                    db.session.commit()
+                    return self._to_dict(instance)
+            
+            instance = self.model_class()
+            for key, value in data.items():
+                if hasattr(instance, key):
+                    setattr(instance, key, value)
+            db.session.add(instance)
+            db.session.commit()
+            return self._to_dict(instance)
         except Exception as e:
-            print(f"[ERRO] upsert em {self.table_name}: {e}")
+            db.session.rollback()
+            print(f"[ERRO] upsert em {self.model_class.__name__}: {e}")
             return None

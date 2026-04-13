@@ -2,6 +2,78 @@
 
 ---
 
+## 🔄 Histórico de Alterações
+
+### 📅 13/04/2026 - Remoção do Supabase e Migração para PostgreSQL
+
+#### Alterações Realizadas:
+
+**1. Remoção do Supabase:**
+- Removido arquivo `app/services/supabase_client.py`
+- Removido arquivo `app/services/supabase_auth.py`
+- Removidos scripts `scripts/export_to_supabase.py` e `scripts/migrate_to_supabase.py`
+- Removida dependência `supabase>=2.28.0` do `requirements.txt`
+- Removidas variáveis `SUPABASE_URL` e `SUPABASE_ANON_KEY` do `.env`
+
+**2. Refatoração de Repositories:**
+- `base_repository.py`: Migrado de Supabase REST API para SQLAlchemy ORM
+- `usuario_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `aluno_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `professor_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `turma_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `aula_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `materia_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `frequencia_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `nota_repository.py`: Reescrito para usar SQLAlchemy diretamente
+- `feriado_repository.py`: Reescrito para usar SQLAlchemy diretamente (inclui DiaNaoLetivoRepository)
+
+**3. Atualização de Models:**
+- Adicionado método `to_dict()` aos modelos:
+  - `Usuario`
+  - `Aluno`
+  - `Professor`
+  - `Turma`
+  - `Aula`
+  - `Materia`
+  - `Feriado`
+  - `DiaNaoLetivo`
+  - `Frequencia`
+  - `Nota`
+
+**4. Atualização de Controllers:**
+- `auth_controller.py`: Atualizado para usar modelo `Usuario` diretamente (sem SupabaseUser)
+- `app/__init__.py`: User loader simplificado para usar SQLAlchemy diretamente
+
+**5. Atualização de Configuração:**
+- `config.py`: Removidas variáveis SUPABASE_URL e SUPABASE_ANON_KEY
+- `.env`: Configurado para PostgreSQL (DATABASE_URL)
+- `.env.example`: Atualizado para PostgreSQL
+
+**6. Padrão de Acesso a Dados:**
+Antes (Supabase REST API):
+```
+Controller → Repository → Supabase Client → REST API → Supabase DB
+```
+
+Depois (SQLAlchemy ORM):
+```
+Controller → Repository → SQLAlchemy ORM → Database (PostgreSQL/SQLite)
+```
+
+#### Benefícios:
+- **Performance**: Conexão direta ao banco, sem overhead de API REST
+- **Consistência**: Usa SQLAlchemy ORM em toda a aplicação
+- **Simplicidade**: Menos dependências externas
+- **Portabilidade**: Funciona com PostgreSQL ou SQLite (fallback)
+- **Manutenção**: Código mais simples e manutenível
+
+#### Banco de Dados:
+- **PostgreSQL**: Recomendado para produção
+- **SQLite**: Fallback automático para desenvolvimento local
+- **Configuração**: Via variável `DATABASE_URL` no `.env`
+
+---
+
 ## 🆕 Funcionalidades Avançadas - Gestão de Turmas e Calendário (Março/2026)
 
 ### ✅ Gestão de Matérias por Professor
@@ -86,230 +158,6 @@
 
 ---
 
-## 🆕 Seed de Dados Expandido (Março/2026)
-
-### Dados Criados
-- **Professores**: 11 (incluindo joao@prof.com)
-- **Alunos**: 120+
-- **Turmas**: 6 (1º ao 3º Ano, Manhã e Tarde)
-- **Matérias**: 7 (Matemática, Português, Ciências, etc.)
-- **Aulas**: 54 agendadas
-- **Feriados**: 10 nacionais brasileiros
-- **Associações professor↔matérias**: Cada professor associado à sua especialidade
-- **Associações turma↔matérias**: Todas as turmas com todas as matérias configuradas
-
-### Script de Seed
-- **Arquivo**: `seed.py`
-- **Executar**: `python3 seed.py`
-- **Funcionalidades**:
-  - Criação automática de turmas equilibradas
-  - Distribuição de alunos nas turmas
-  - Geração de aulas inteligente
-  - Associação de professores às matérias
-  - Associação de matérias às turmas com aulas/semana
-
-### Contas para Teste
-| Email | Senha | Tipo |
-|-------|-------|------|
-| joao@escola.com | 1234 | Diretora |
-| coordenacao@escola.com | 1234 | Coordenação |
-| joao@prof.com | 1234 | Professor |
-| maria@escola.com | 1234 | Professor |
-
----
-
-## 🆕 Atualizações Recentes (Março/2026)
-
-### ✅ Correções de Erros
-
-#### 1. NameError: name 'Nota' is not defined
-- **Problema**: Erro ao tentar usar a classe Nota nos modelos
-- **Solução**: Adicionado import `from app.models.nota import Nota` no modelo Aluno
-- **Arquivo modificado**: `app/models/aluno.py`
-
-#### 2. jinja2.exceptions.UndefinedError: 'csrf_token' is undefined
-- **Problema**: Formulários sem proteção CSRF
-- **Solução**: 
-  - Adicionado Flask-WTF CSRFProtect em `app/__init__.py`
-  -Token CSRF adicionado a todos os formuláriosPOST
-- **Arquivos modificados**: `app/__init__.py`, múltiplos templates
-
-#### 3. TypeError: lambda() takes 1 positional argument but 2 were given (ProfessorDTO.disponibilidades)
-- **Problema**: Lambda em `get_dia_label` definida com 1 parâmetro, mas chamada como método de instância (recebe 2 argumentos: self implícito + ds)
-- **Causa**: `lambda ds: self._get_dia_label(ds)` na criação de objeto dinâmico
-- **Solução**: Alterado para `lambda obj, ds: self._get_dia_label(ds)` aceitando o primeiro argumento implícito do objeto
-- **Arquivo modificado**: `app/dtos/professor_dto.py` (linha 180)
-
-#### 4. Melhoria UX - Cadastro Múltiplo de Dias na Disponibilidade
-- **Problema**: Modal anterior permitia selecionar apenas 1 dia por vez, exigindo múltiplas submissões
-- **Solução**: Substituído `<select>` único por **checkboxes múltiplos** no modal
-- **Funcionalidade**:
-  - Seleção visual de múltiplos dias da semana simultaneamente
-  - Grid responsivo com checkboxes estilizados
-  - Feedback de dias já existentes (evita duplicatas)
-  - Mensagens de sucesso/erro detalhadas
-- **Arquivos modificados**:
-  - `app/templates/professores/detalhe.html` (modal com checkboxes)
-  - `app/controllers/professores_controller.py` (processamento de múltiplos dias)
-
-#### 5. Correção Schema - Tabela turma_materias
-- **Problema**: Tabela `turma_materias` existia no código mas não estava no `database/schema.sql`
-- **Solução**: Adicionada definição completa da tabela ao schema SQL
-- **Melhoria**: Empty-state modernizado na página de turma
-- **Arquivos modificados**:
-  - `database/schema.sql` (adição da tabela turma_materias)
-  - `app/templates/turmas/detalhe.html` (empty-state modernizado)
-
-#### 6. Correção Schema - Tabelas materias e professor_materias
-- **Problema**: Tabelas `materias` e `professor_materias` não existiam no `database/schema.sql`, causando erro de FK em `turma_materias`
-- **Solução**: Adicionadas definições completas das tabelas ao schema SQL
-- **Estrutura criada**:
-  - `materias`: id, nome, codigo, descricao, carga_horaria, ativa
-  - `professor_materias`: professor_id, materia_id (chave composta)
-- **Arquivos modificados**:
-  - `database/schema.sql` (adição das tabelas)
-
-#### 7. Correção BaseDTO - Método __eq__ para comparação de objetos
-- **Problema**: Comparação `{% if materia in turma.materias %}` no template não funcionava porque DTOs comparavam referências, não IDs
-- **Solução**: Adicionados métodos `__eq__` e `__hash__` ao `BaseDTO` para comparar objetos pelo ID
-- **Arquivos modificados**:
-  - `app/dtos/base_dto.py` (adição de __eq__ e __hash__)
-
-#### 8. Correção Supabase - Coluna aulas_por_periodo ausente
-- **Problema**: `ERROR: 42703: column "aulas_por_periodo" of relation "turma_materias" does not exist`
-- **Causa**: Tabela `turma_materias` criada no Supabase sem a coluna `aulas_por_periodo`
-- **Solução SQL**:
-  ```sql
-  ALTER TABLE turma_materias 
-  ADD COLUMN IF NOT EXISTS aulas_por_periodo INTEGER DEFAULT 2;
-  ```
-- **Impacto**: Essa coluna é usada para definir quantas aulas por semana cada matéria tem na turma
-
----
-
-### ✅ Novas Funcionalidades
-
-#### 1. Disponibilidade de Professores (Etapa 3)
-- **Modelo novo**: `DisponibilidadeProfessor` em `app/models/especialidade.py`
-- **Campos**: dia_semana, horario_inicio, horario_fim
-- **Interface**: Página de detalhe do professor com modal para adicionar disponibilidade
-- **Arquivos novos**: Rota em `app/controllers/professores_controller.py`
-
-#### 2. Sistema de Frequência (Etapa 4)
-- **Modelo**: `Frequencia` em `app/models/frequencia.py` (já existia)
-- **Funcionalidade**: Lista todos os alunos da turma, permite marcar Presente/Ausente com justificativa
-
-
-### ✅ Controle de Disponibilidade de Professores
-
-#### Estrutura da Tabela: disponibilidade_professores
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | SERIAL (PK) | Identificador único |
-| professor_id | INTEGER (FK) | Referência ao professor |
-| dia_semana | INTEGER | Dia da semana (0=Segunda, 6=Domingo) |
-| horario_inicio | TIME | Horário de início da disponibilidade |
-| horario_fim | TIME | Horário de fim da disponibilidade |
-| ativo | BOOLEAN | Se a disponibilidade está ativa |
-| criado_em | TIMESTAMP | Data de criação |
-| atualizado_em | TIMESTAMP | Data da última atualização |
-
-#### Relacionamentos
-- **Professor ↔ Disponibilidade**: 1:N
-  - Um professor pode ter múltiplas disponibilidades
-  - Cada disponibilidade pertence a um único professor
-
-#### Uso no Sistema
-- **Visualização**: Página de detalhe do professor mostra disponibilidades cadastradas
-- **Gerenciamento**: Botão "Adicionar Disponibilidade" na página do professor
-- **Cadastro múltiplo**: Modal permite selecionar vários dias da semana de uma vez (checkboxes)
-
-#### Comportamento do Modal de Disponibilidade
-- **Interface**: Grid de checkboxes com 7 dias (Seg a Dom)
-- **Seleção**: Pode marcar um ou mais dias simultaneamente
-- **Horário**: Define horário de início e fim para todos os dias selecionados
-- **Validação**: Verifica duplicatas antes de inserir (mesmo professor + dia + horário)
-- **Feedback**: Exibe quantos dias foram criados e quantos já existiam
-
-
-### ✅ Associação de Matérias às Turmas
-
-#### Funcionalidade
-Permite gerenciar quais matérias cada turma possui e quantas aulas por semana cada matéria terá.
-
-#### Estrutura da Tabela: turma_materias
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| turma_id | INTEGER (FK) | Referência à turma |
-| materia_id | INTEGER (FK) | Referência à matéria |
-| aulas_por_periodo | INTEGER | Quantidade de aulas por semana (padrão: 2) |
-| criado_em | TIMESTAMP | Data de criação |
-| atualizado_em | TIMESTAMP | Data da última atualização |
-
-#### Relacionamentos
-- **Turma ↔ Matéria**: N:N via `turma_materias`
-  - Uma turma pode ter múltiplas matérias
-  - Uma matéria pode estar em múltiplas turmas
-  - Cada associação define quantas aulas/semana
-
-#### Uso no Sistema
-- **Visualização**: Página de detalhe da turma mostra matérias cadastradas com aulas/semana
-- **Gerenciamento**: Botão "Gerenciar Matérias" na página da turma
-- **Empty State**: Quando não há matérias, exibe ilustração moderna com ação para adicionar
-- **Geração de Calendário**: As matérias são usadas na geração automática de aulas
-- **Análise**: Integrado com sistema de desempenho e professores
-
-#### Interface - Empty State Moderno
-Quando uma turma não possui matérias cadastradas:
-- **Ilustração**: Ícone circular com gradiente
-- **Mensagem**: "Nenhuma matéria cadastrada"
-- **Descrição**: Orientação sobre a importância das matérias para o cronograma
-- **Ação**: Botão "Adicionar Matérias" direto para a página de gerenciamento
-
-#### Rotas Disponíveis
-- `GET /turmas/<id>/materias` - Página de gerenciamento de matérias
-- `POST /turmas/<id>/materias` - Salvar matérias selecionadas
-- `POST /turmas/<id>/materias/adicionar` - API para adicionar matéria individual
-- `DELETE /turmas/<id>/materias/<materia_id>` - API para remover matéria
-- **Calendário**: O gerador de calendário pode usar as disponibilidades para evitar conflitos
-
-#### Script de Migração
-- **Arquivo**: `database/migrations/001_create_disponibilidade_professores.sql`
-- **Instruções**:
-  1. Acesse o painel do Supabase (https://supabase.com/dashboard)
-  2. Selecione o projeto
-  3. Vá em SQL Editor
-  4. Cole o conteúdo do arquivo e execute
-
-#### Verificação de Tabelas
-- **Endpoint**: `/configuracoes/verificar-banco`
-- **Função**: `verify_required_tables()` em `app/services/supabase_client.py`
-- **Retorna**: Status de todas as tabelas necessárias no Supabase
-
-
-### ✅ Correção do Erro PGRST205 (Março/2026)
-
-#### Problema Identificado
-- **Erro**: `PGRST205` - "Could not find the table 'public.disponibilidade_professores' in the schema cache"
-- **Causa**: A tabela `disponibilidade_professores` existia apenas como modelo SQLAlchemy, mas nunca foi criada no Supabase PostgreSQL
-- **Ocorrência**: Ao clicar em "Gerar Calendário" ou ao tentar adicionar disponibilidade a um professor
-
-#### Solução Implementada
-1. **Script SQL de Migração**: Criado `database/migrations/001_create_disponibilidade_professores.sql`
-2. **Schema Atualizado**: Adicionada a tabela ao `database/schema.sql`
-3. **Tratamento de Erros**: Melhorado no DTO (`professor_dto.py`) e Controller (`professores_controller.py`)
-4. **Verificação de Tabelas**: Adicionada função `verify_required_tables()` no cliente Supabase
-5. **Endpoint de Verificação**: Rota `/configuracoes/verificar-banco` para diagnosticar problemas
-
-#### Prevenção Futura
-- Sistema de verificação de tabelas no startup
-- Logs de erro mais claros com instruções de solução
-- Mensagens amigáveis ao usuário quando tabelas não existem
-
----
-- **Interface**: Página `aulas/frequencia.html` com formulário completo (@R南通 教育)
-
----
 
 ## 📌 Visão Geral do Sistema
 
@@ -360,7 +208,7 @@ projeto/
 │   │   ├── calendario_controller.py
 │   │   ├── configuracoes_controller.py
 │   │   └── analise_controller.py
-│   ├── repositories/            # Camada de Acesso a Dados (Supabase)
+│   ├── repositories/            # Camada de Acesso a Dados (SQLAlchemy)
 │   │   ├── __init__.py
 │   │   ├── base_repository.py   # CRUD genérico
 │   │   ├── usuario_repository.py
@@ -374,7 +222,6 @@ projeto/
 │   │   ├── feriado_repository.py
 │   │   └── escola_repository.py
 │   ├── services/                # Serviços de Negócio
-│   │   ├── supabase_client.py   # Cliente Supabase
 │   │   └── gerador_calendario.py
 │   ├── views/                   # Views (Helpers/Utilitários)
 │   ├── static/
@@ -418,21 +265,16 @@ O projeto segue o padrão **Model-View-Controller (MVC)**:
 ### Fluxo de Requisições
 
 ```
-Requisição HTTP → Flask Router → Controller → Repository → Supabase REST API → Resposta
+Requisição HTTP → Flask Router → Controller → Repository → SQLAlchemy ORM → Database
                                     ↓
-                              SupabaseUser (Flask-Login)
+                              Flask-Login User (Usuario model)
 ```
 
-**Fluxo Supabase (atual):**
+**Fluxo SQLAlchemy (atual):**
 ```
-Requisição → Controller → Repository → Supabase Client → REST API → Supabase DB
+Requisição → Controller → Repository → SQLAlchemy ORM → PostgreSQL/SQLite → Resposta
                                     ↓
-                              SupabaseUser (autenticação)
-```
-
-**Fluxo legado (SQLAlchemy - apenas para compatibilidade):**
-```
-Requisição → Controller → Model (SQLAlchemy) → SQLite (fallback) → Resposta
+                              Usuario Model (Flask-Login)
 ```
 
 ---
@@ -794,10 +636,10 @@ Requisição → Controller → Model (SQLAlchemy) → SQLite (fallback) → Res
 6. **Tema**: Respeitar variáveis CSS do sistema de temas
 
 ### Contexto Resumido
-- Flask + Supabase (REST API) + SQLAlchemy (compatibilidade)
+- Flask + SQLAlchemy ORM
 - MVC com Blueprints + Camada de Repositório
-- Flask-Login com SupabaseUser wrapper
-- Supabase-py para acesso a dados via REST API
+- Flask-Login com Usuario model
+- PostgreSQL (produção) / SQLite (fallback)
 - WTForms para formulários
 - Chart.js para gráficos
 - CSS Variables para temas
@@ -812,13 +654,16 @@ Requisição → Controller → Model (SQLAlchemy) → SQLite (fallback) → Res
 pip install -r requirements.txt
 ```
 
-### 2. Configurar PostgreSQL (opcional - SQLite é usado como fallback)
+### 2. Configurar PostgreSQL
 ```bash
 # Criar banco de dados
 createdb analitcs_school
 
 # Ou via SQL
 CREATE DATABASE analitcs_school;
+
+# Configurar usuário (se necessário)
+psql -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
 ```
 
 ### 3. Configurar variáveis de ambiente
@@ -867,825 +712,5 @@ Email: joao@escola.com
 Senha: 1234
 Tipo: diretora (acesso total)
 ```
-
----
-
-## ☁️ Deploy na Vercel
-
-### Pré-requisitos
-1. Conta na [Vercel](https://vercel.com)
-2. Projeto configurado com PostgreSQL (ex: Supabase, Neon, Railway, Render)
-3. Repositório no GitHub/GitLab/Bitbucket
-
-### Passos para Deploy
-
-#### 1. Configurar variáveis de ambiente na Vercel
-No painel da Vercel, vá em **Settings → Environment Variables** e adicione:
-
-| Variável | Valor | Obrigatória |
-|----------|-------|-------------|
-| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` | Sim |
-| `SECRET_KEY` | Uma string aleatória segura | Sim |
-| `FLASK_ENV` | `production` | Não |
-
-#### 2. Conectar repositório
-- Clique em "Add New..." → "Project"
-- Selecione o repositório
-- A Vercel detectará automaticamente o `api/index.py`
-
-#### 3. Deploy
-- Clique em "Deploy"
-- A Vercel instalará as dependências e fará o deploy
-
-#### 4. Verificar
-- Acesse a URL fornecida pela Vercel
-- Verifique se `/auth/login` funciona
-
-### Estrutura de Deploy na Vercel
-
-```
-projeto/
-├── api/
-│   └── index.py          ← Entrypoint serverless
-├── app/
-│   ├── static/           ← Servido estaticamente
-│   ├── templates/
-│   ├── controllers/
-│   └── models/
-├── vercel.json           ← Configuração de roteamento
-├── .vercelignore         ← Arquivos excluídos
-├── runtime.txt           ← Versão Python
-└── requirements.txt      ← Dependências
-```
-
-### Variáveis de Ambiente por Ambiente
-
-| Ambiente | `DATABASE_URL` | `FLASK_ENV` | `SECRET_KEY` |
-|----------|---------------|-------------|--------------|
-| Local (dev) | PostgreSQL ou SQLite | `development` | Qualquer |
-| Vercel (prod) | PostgreSQL obrigatório | `production` | Segura e única |
-
-### Provedores de PostgreSQL Recomendados (Gratuitos)
-- [Supabase](https://supabase.com) - 500MB gratuito
-- [Neon](https://neon.tech) - 512MB gratuito
-- [Railway](https://railway.app) - 5$/mês (trial grátis)
-- [Render](https://render.com) - 90 dias gratuito
-
----
-
-## 🔄 Exportação SQLite → Supabase (SQL)
-
-### Estratégia
-O script `scripts/export_to_supabase.py` gera um arquivo SQL completo que pode ser executado diretamente no SQL Editor do Supabase.
-
-### O que o Script Faz
-1. Conecta ao banco SQLite local
-2. Extrai schemas e dados de todas as tabelas
-3. Converte tipos SQLite → PostgreSQL
-4. Gera CREATE TABLE com constraints corretos
-5. Gera INSERT INTO para todos os registros
-6. Reseta sequences após inserção
-
-### Conversões Realizadas
-
-| SQLite | PostgreSQL | Observação |
-|--------|------------|------------|
-| `INTEGER PRIMARY KEY` | `SERIAL` | Auto-increment |
-| `INTEGER` (PK composto) | `INTEGER NOT NULL` | Chave composta |
-| `DATETIME` | `TIMESTAMP` | Tipo de data |
-| `BOOLEAN` (0/1) | `BOOLEAN` | Compatível |
-| `VARCHAR(n)` | `VARCHAR(n)` | Compatível |
-| `TEXT` | `TEXT` | Compatível |
-| `FLOAT` | `DOUBLE PRECISION` | Precisão maior |
-
-### Como Usar
-
-```bash
-# 1. Gerar o arquivo SQL
-python scripts/export_to_supabase.py
-
-# 2. O arquivo export_supabase.sql será criado na raiz
-
-# 3. No Supabase:
-#    - Acesse SQL Editor
-#    - Clique em "New Query"
-#    - Cole o conteúdo de export_supabase.sql
-#    - Clique em "Run"
-```
-
-### Estrutura do Arquivo SQL Gerado
-
-```sql
--- Cabeçalho com metadados
--- DROP TABLE IF EXISTS (para re-execução)
--- CREATE TABLE (15 tabelas com constraints)
--- Índices únicos
--- Desabilitar FK checks temporariamente
--- INSERT INTO (387 registros)
--- Reabilitar FK checks
--- Resetar sequences
-```
-
-### Validação
-- Total de tabelas: 15
-- Total de registros: 387
-- Foreign keys preservadas
-- Chaves primárias compostas tratadas corretamente
-
----
-
-## 🐞 Resolução de Problemas
-
-### Erro: "No flask entrypoint found"
-
-#### Causa
-O erro ocorre quando o Flask CLI (`flask run`) não consegue encontrar a instância da aplicação Flask. Isso acontece porque:
-
-1. Não existe arquivo `app.py` na raiz do projeto
-2. A variável de ambiente `FLASK_APP` não está configurada corretamente
-3. A variável `app` está encapsulada dentro de uma função (não acessível no escopo global)
-
-#### Solução Aplicada
-
-**Arquivo `app.py` (Entrypoint Principal):**
-```python
-# app.py cria a instância 'app' no escopo global
-from app import create_app
-app = create_app('development')
-```
-
-**Arquivo `.flaskenv` (Configuração Automática):**
-```bash
-FLASK_APP=app.py
-FLASK_ENV=development
-```
-
-**Arquivo `pyproject.toml` (Scripts de Projeto):**
-```toml
-[project.scripts]
-analitcs-school = "app:app.run"
-```
-
-#### Como Funciona
-
-| Método | Arquivo | Variável `app` | Funciona com `flask run` |
-|--------|---------|----------------|--------------------------|
-| `app.py` | Raiz | Global | ✅ Sim |
-| `.flaskenv` | Config | Define `FLASK_APP` | ✅ Sim |
-| `pyproject.toml` | Config | Script registrado | ✅ Sim |
-| `run.py` | Raiz | Dentro de função | ❌ Não (apenas `python run.py`) |
-
-#### Prevenção Futura
-
-1. Sempre manter `app.py` na raiz do projeto Flask
-2. Manter `.flaskenv` com `FLASK_APP=app.py`
-3. Usar factory pattern mas expor `app` no módulo principal
-4. Testar com `flask routes` após mudanças
-
----
-
-### Erro: "500 INTERNAL_SERVER_ERROR - FUNCTION_INVOCATION_FAILED" (Vercel)
-
-#### Causa
-Este erro ocorre quando a Serverless Function da Vercel falha durante a inicialização. Causas principais:
-
-1. **Sem `vercel.json`** - Vercel não sabe como rotear requisições
-2. **Sem entrypoint serverless** - Falta `api/index.py` para Vercel
-3. **Timeout de conexão ao banco** - `config.py` tenta conectar ao PostgreSQL durante importação
-4. **SQLite em diretório read-only** - Vercel só permite escrita em `/tmp`
-5. **SESSION_TYPE = 'filesystem'** - Filesystem é read-only em serverless
-
-#### Solução Aplicada
-
-**1. Arquivo `vercel.json` (Roteamento):**
-```json
-{
-  "version": 2,
-  "builds": [
-    {"src": "api/index.py", "use": "@vercel/python"},
-    {"src": "app/static/**", "use": "@vercel/static"}
-  ],
-  "routes": [
-    {"src": "/static/(.*)", "dest": "/app/static/$1"},
-    {"src": "/(.*)", "dest": "api/index.py"}
-  ]
-}
-```
-
-**2. Arquivo `api/index.py` (Entrypoint Serverless):**
-```python
-import os, sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('FLASK_ENV', 'production')
-from app import create_app
-app = create_app('production')
-```
-
-**3. Refatoração de `config.py`:**
-- Adicionada função `is_serverless()` para detectar ambiente Vercel
-- `get_database_uri()` agora NÃO testa conexão em serverless
-- SQLite fallback usa `/tmp` em serverless
-- Suporte a `postgres://` → `postgresql://` (Render/Railway)
-
-**4. Correção em `app/__init__.py`:**
-- `db.create_all()` não falha silenciosamente em serverless
-- Upload folder não é criado em serverless
-
-**5. Arquivo `.vercelignore`:**
-- Exclui `.env`, `.venv`, `__pycache__`, `instance/` do deploy
-
-**6. Arquivo `runtime.txt`:**
-- Especifica Python 3.11.6
-
-#### Variáveis de Ambiente na Vercel
-
-Configure no painel da Vercel (Settings → Environment Variables):
-
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `DATABASE_URL` | URI do PostgreSQL | `postgresql://user:pass@host:5432/db` |
-| `SECRET_KEY` | Chave secreta do Flask | `sua-chave-secreta-aqui` |
-| `FLASK_ENV` | Ambiente | `production` |
-
-#### Estrutura de Deploy
-
-```
-projeto/
-├── api/
-│   └── index.py          # Entrypoint serverless (Vercel)
-├── app/
-│   ├── __init__.py       # Factory Flask
-│   ├── controllers/      # Blueprints
-│   ├── models/           # SQLAlchemy
-│   ├── templates/        # Jinja2
-│   └── static/           # CSS/JS/Images
-├── app.py                # Entrypoint local (flask run)
-├── config.py             # Configurações (detecta serverless)
-├── vercel.json           # Configuração Vercel
-├── .vercelignore         # Arquivos excluídos do deploy
-├── runtime.txt           # Versão do Python
-└── requirements.txt      # Dependências
-```
-
-#### Prevenção Futura
-
-1. Sempre testar com `FLASK_ENV=production` localmente antes de deploy
-2. Usar `is_serverless()` para lógica condicional
-3. Nunca fazer I/O de filesystem em serverless (exceto `/tmp`)
-4. Usar PostgreSQL em produção (não SQLite)
-5. Configurar variáveis de ambiente na Vercel antes do deploy
-
----
-
-## ☁️ Integração com Supabase (REST API)
-
-### Visão Geral
-O sistema utiliza o Supabase como backend via REST API, mantendo compatibilidade total com a arquitetura MVC existente.
-
-### Configuração
-
-#### Variáveis de Ambiente (.env)
-```env
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua-anon-key-aqui
-```
-
-#### Bibliotecas Utilizadas
-- **supabase==2.0.0**: Cliente Python para Supabase REST API
-- **postgrest**: Cliente PostgreSQL REST
-- **gotrue**: Autenticação Supabase
-- **storage3**: Storage Supabase
-- **realtime**: Realtime Supabase
-
-### Arquitetura de Acesso aos Dados
-
-#### Camada de Serviço (`app/services/`)
-```
-app/services/
-├── supabase_client.py        # Cliente Supabase singleton
-└── gerador_calendario.py     # Serviço existente
-```
-
-**supabase_client.py:**
-- `get_supabase_client()`: Retorna instância singleton do cliente Supabase
-- `test_connection()`: Testa conexão com Supabase
-- `is_supabase_configured()`: Verifica se as variáveis estão configuradas
-
-#### Camada de Repositório (`app/repositories/`)
-```
-app/repositories/
-├── __init__.py               # Exportações
-├── base_repository.py        # CRUD genérico
-├── usuario_repository.py     # Operações com usuários
-├── aluno_repository.py       # Operações com alunos
-├── professor_repository.py   # Operações com professores
-├── turma_repository.py       # Operações com turmas
-├── aula_repository.py        # Operações com aulas
-├── materia_repository.py     # Operações com matérias
-├── frequencia_repository.py  # Operações com frequências
-├── nota_repository.py        # Operações com notas
-├── feriado_repository.py     # Operações com feriados e dias não letivos
-└── escola_repository.py      # Operações com escolas
-```
-
-**BaseRepository** (operações genéricas):
-- `get_all()`: Lista registros com filtros, ordenação e paginação
-- `get_by_id()`: Busca por ID
-- `get_by_field()`: Busca por campo específico
-- `get_one_by_field()`: Busca único registro por campo
-- `create()`: Cria novo registro
-- `update()`: Atualiza registro existente
-- `delete()`: Remove registro
-- `count()`: Conta registros
-- `exists()`: Verifica existência
-- `upsert()`: Insere ou atualiza
-
-**Repositórios Específicos** (operações especializadas):
-- Cada repositório herda de BaseRepository
-- Adiciona métodos específicos para a entidade
-- Ex: `UsuarioRepository.get_by_email()`, `AlunoRepository.get_by_turma()`
-
-### Uso nos Controllers
-
-```python
-from app.repositories import UsuarioRepository, AlunoRepository
-
-# Instanciar repositórios
-usuario_repo = UsuarioRepository()
-aluno_repo = AlunoRepository()
-
-# Operações CRUD
-usuarios = usuario_repo.get_all()
-usuario = usuario_repo.get_by_email('email@exemplo.com')
-novo_aluno = aluno_repo.create({'nome': 'João', 'matricula': '2026001'})
-
-# Operações especializadas
-alunos_turma = aluno_repo.get_by_turma(turma_id=1)
-stats = aluno_repo.get_aluno_stats(aluno_id=1)
-```
-
-### Boas Práticas de Segurança
-
-1. **Variáveis de Ambiente**:
-   - NUNCA expor `SUPABASE_ANON_KEY` no código
-   - Usar `.env` para desenvolvimento
-   - Configurar variáveis no painel do provedor (Vercel, Railway, etc.)
-
-2. **Row Level Security (RLS)**:
-   - A anon key é segura para uso no frontend
-   - RLS protege os dados no Supabase
-   - Configurar políticas RLS no painel do Supabase
-
-3. **Autenticação**:
-   - Manter Flask-Login para autenticação local
-   - Supabase Auth disponível para autenticação futura
-
-### Migração Gradual
-
-O sistema suporta migração gradual:
-1. **Fase 1**: SQLite local (desenvolvimento) + Repositórios Supabase (disponíveis)
-2. **Fase 2**: Controllers podem usar repositórios Supabase
-3. **Fase 3**: Migração completa para Supabase (remover SQLAlchemy)
-
-### Como Obter a Chave Supabase
-
-1. Acesse [Supabase Dashboard](https://supabase.com/dashboard)
-2. Selecione seu projeto
-3. Vá em **Settings → API**
-4. Copie a chave **anon public** (formato JWT: `eyJ...`)
-5. Cole em `.env` como `SUPABASE_ANON_KEY`
-
----
-
-## 📝 Notas Técnicas
-
-### Segurança
-- Senhas com hash (Werkzeug)
-- CSRF Protection (Flask-WTF)
-- Validação de formulários
-- Controle de acesso por tipo de usuário
-
-### Performance
-- Índices em campos de busca
-- Paginação de listas
-- Lazy loading de relacionamentos
-- CSS e JS minificados em produção
-
-### Extensibilidade
-- Fácil adição de novos módulos
-- Sistema de plugins via Blueprints
-- Templates herdados para consistência
-- API REST para integrações futuras
-
----
-
-## 📋 Changelog
-
-### Versão 2.3.2 (28/03/2026)
-
-#### ✅ Correção de Erros Jinja2 e Controllers
-
-**Erros Corrigidos:**
-
-1. **`'str object' has no attribute 'strftime'`**
-   - Causa: Dados do Supabase retornam datas como strings, não datetime
-   - Solução: 
-     - `SupabaseUser` agora converte strings para datetime ao inicializar
-     - `BaseDTO.parse_date/parse_time/parse_datetime` melhorados para mais formatos
-     - Templates atualizados para verificar None antes de chamar strftime
-   - Arquivos: `supabase_auth.py`, `base_dto.py`, múltiplos templates
-
-2. **`'dict object' has no attribute 'professores'`**
-   - Causa: Template `turmas/materias.html` acessava `materia.professores` em dict puro
-   - Solução: Controller agora passa `MateriaDTO` em vez de dict raw
-   - Arquivo: `turmas_controller.py`
-
-3. **`MateriaProfessoresProxy` sem método `count()`**
-   - Causa: Template chamava `materia.professores.filter_by().count()`
-   - Solução: Adicionado método `count()` ao proxy
-   - Arquivo: `materia_dto.py`
-
-4. **`'ProfessorRepository' has no attribute 'get_active_professores'`**
-   - Causa: Controller chamava método em português, repositório tem em inglês
-   - Solução: Corrigido para `get_active_professors()`
-   - Arquivo: `aulas_controller.py`
-
-5. **Erro 500 na página de configurações**
-   - Causa: `current_user.criado_em` era string, não datetime
-   - Solução: `SupabaseUser` agora converte datas na inicialização
-   - Template atualizado para verificar None
-   - Arquivos: `supabase_auth.py`, `configuracoes/index.html`
-
-**Templates Atualizados:**
-- `aulas/detalhe.html` - strftime seguro
-- `aulas/index.html` - strftime seguro
-- `aulas/frequencia.html` - strftime seguro + filtro Jinja2
-- `dashboard/index.html` - strftime seguro
-- `configuracoes/index.html` - strftime seguro
-- `calendario/feriados.html` - strftime seguro
-- `calendario/dias_nao_letivos.html` - strftime seguro
-- `professores/detalhe.html` - strftime seguro
-
-### Versão 2.3.1 (28/03/2026)
-
-#### ✅ Correção de Erros nos Templates (UndefinedError)
-
-**Problema Identificado:**
-Os templates esperavam métodos e atributos que existiam nos modelos SQLAlchemy,
-mas os objetos wrapper criados nos controllers não os possuíam após a migração
-para Supabase REST API.
-
-**Solução Aplicada:**
-Criado módulo DTO (Data Transfer Object) que fornece a mesma interface
-que os modelos SQLAlchemy, garantindo compatibilidade total com templates.
-
-**DTOs Criados:**
-- `app/dtos/base_dto.py` - Classe base com conversões de tipos
-- `app/dtos/aluno_dto.py` - AlunoDTO com `percentual_frequencia()` e `media_notas()`
-- `app/dtos/turma_dto.py` - TurmaDTO com `total_alunos()`, `get_aulas_por_periodo()`, `alunos`, `materias`
-- `app/dtos/professor_dto.py` - ProfessorDTO com `total_aulas()`, `usuario`, `turmas`, `disponibilidades`
-- `app/dtos/aula_dto.py` - AulaDTO com `turma`, `professor`, `frequencias`
-- `app/dtos/materia_dto.py` - MateriaDTO com proxy `professores.filter_by().all()`
-- `app/dtos/frequencia_dto.py` - FrequenciaDTO com `aluno`
-- `app/dtos/usuario_dto.py` - UsuarioDTO básico
-
-**Erros Corrigidos:**
-
-1. `UndefinedError: 'AlunoObj object' has no attribute 'percentual_frequencia'`
-   - Causa: Template `turmas/detalhe.html` chamava `aluno.percentual_frequencia(turma.id)`
-   - Solução: AlunoDTO implementa método `percentual_frequencia(turma_id)` que consulta Supabase
-
-2. `UndefinedError: 'dict object' has no attribute 'professores'`
-   - Causa: Template `turmas/detalhe.html` acessava `materia.professores.filter_by().all()`
-   - Solução: MateriaDTO usa `MateriaProfessoresProxy` que simula comportamento SQLAlchemy
-
-3. `UndefinedError: 'AlunoObj object' has no attribute 'media_notas'`
-   - Causa: Template `alunos/detalhe.html` chamava `aluno.media_notas()`
-   - Solução: AlunoDTO implementa método `media_notas(turma_id)` que consulta Supabase
-
-4. `UndefinedError: 'ProfessorObj object' has no attribute 'total_aulas'`
-   - Causa: Template `professores/detalhe.html` chamava `professor.total_aulas()`
-   - Solução: ProfessorDTO implementa método `total_aulas()` que conta aulas no Supabase
-
-5. `UndefinedError: 'AulaObj object' has no attribute 'frequencias'`
-   - Causa: Template `aulas/detalhe.html` acessava `aula.frequencias.count()`
-   - Solução: AulaDTO implementa property `frequencias` e template usa `if aula.frequencias`
-
-**Controllers Atualizados para Usar DTOs:**
-- `turmas_controller.py` - Usa TurmaDTO
-- `alunos_controller.py` - Usa AlunoDTO
-- `professores_controller.py` - Usa ProfessorDTO
-- `aulas_controller.py` - Usa AulaDTO
-
-**Templates Corrigidos:**
-- `aulas/detalhe.html` - `aula.frequencias.count()` → `aula.frequencias`
-
-**Padrão de Correção:**
-- DTOs encapsulam lógica de acesso a dados
-- Templates mantêm sintaxe original (compatibilidade total)
-- Repositórios são passados via dicionário para DTOs
-- Cache interno evita consultas repetidas
-
-### Versão 2.3.0 (28/03/2026)
-
-#### ✅ Migração Completa para Supabase REST API
-- **Todos os controllers** agora usam Supabase via REST API
-- **Removida dependência** de SQLAlchemy para operações de dados
-- **Flask-Login** integrado com Supabase via `SupabaseUser` wrapper
-
-#### Controllers Atualizados
-- `auth_controller.py` - Login/Registro via Supabase
-- `dashboard_controller.py` - Estatísticas via Supabase
-- `alunos_controller.py` - CRUD completo via Supabase
-- `professores_controller.py` - CRUD completo via Supabase
-- `turmas_controller.py` - CRUD completo via Supabase
-- `aulas_controller.py` - CRUD completo via Supabase
-- `materias_controller.py` - CRUD completo via Supabase
-- `calendario_controller.py` - Calendário via Supabase
-- `configuracoes_controller.py` - Configurações via Supabase
-- `analise_controller.py` - Análises via Supabase
-
-#### Novos Arquivos
-- `app/services/supabase_auth.py` - Wrapper SupabaseUser para Flask-Login
-
-#### Arquivos Modificados
-- `app/__init__.py` - User loader usa Supabase
-- Todos os controllers em `app/controllers/`
-
-#### Benefícios
-- Sistema 100% baseado em Supabase REST API
-- Sem necessidade de PostgreSQL local
-- Dados centralizados no Supabase
-- Melhor escalabilidade
-- Manutenção simplificada
-
-### Versão 2.2.0 (28/03/2026)
-
-#### ✅ Integração com Supabase (REST API)
-- **Cliente Supabase**: `app/services/supabase_client.py`
-  - Inicialização singleton do cliente Supabase
-  - Teste de conexão automático
-  - Detecção de configuração
-- **Camada de Repositório**: `app/repositories/`
-  - `BaseRepository`: CRUD genérico via REST API
-  - 10 repositórios específicos para cada entidade
-  - Operações especializadas por entidade
-- **Configuração**:
-  - `SUPABASE_URL` e `SUPABASE_ANON_KEY` no `.env`
-  - Configuração em `config.py`
-  - `.env.example` atualizado
-- **Dependências**:
-  - `supabase==2.0.0` adicionado ao `requirements.txt`
-- **Segurança**:
-  - Variáveis de ambiente para credenciais
-  - Nunca expor chaves no código
-  - Compatível com RLS do Supabase
-
-#### Arquivos Criados
-- `app/services/supabase_client.py` - Cliente Supabase
-- `app/repositories/__init__.py` - Exportações
-- `app/repositories/base_repository.py` - CRUD genérico
-- `app/repositories/usuario_repository.py` - Usuários
-- `app/repositories/aluno_repository.py` - Alunos
-- `app/repositories/professor_repository.py` - Professores
-- `app/repositories/turma_repository.py` - Turmas
-- `app/repositories/aula_repository.py` - Aulas
-- `app/repositories/materia_repository.py` - Matérias
-- `app/repositories/frequencia_repository.py` - Frequências
-- `app/repositories/nota_repository.py` - Notas
-- `app/repositories/feriado_repository.py` - Feriados e Dias Não Letivos
-- `app/repositories/escola_repository.py` - Escolas
-
-#### Arquivos Modificados
-- `config.py` - Adicionado SUPABASE_URL e SUPABASE_ANON_KEY
-- `.env` - Adicionado credenciais Supabase
-- `.env.example` - Atualizado com Supabase
-- `requirements.txt` - Adicionado supabase
-- `PROJECT_CONTEXT.md` - Seção de integração Supabase
-
-#### ⚠️ Ação Necessária
-- Atualizar `SUPABASE_ANON_KEY` no `.env` com a chave correta do painel Supabase
-- A chave deve ser obtida em: Supabase Dashboard → Settings → API → anon public key
-
-### Versão 2.1.1 (28/03/2026)
-
-#### ✅ Exportação SQL para Supabase
-- **Script**: `scripts/export_to_supabase.py`
-  - Converte SQLite → PostgreSQL automaticamente
-  - Gera arquivo `export_supabase.sql` pronto para o SQL Editor do Supabase
-  - Trata tipos de dados, chaves primárias compostas e foreign keys
-  - Escapa strings e trata valores NULL corretamente
-- **Arquivo gerado**: `export_supabase.sql`
-  - 15 tabelas
-  - 387 registros
-  - 109.7 KB
-- **Correções aplicadas**:
-  - Tabelas de junção usam INTEGER (não SERIAL) com PRIMARY KEY composta
-  - Sequences resetadas apenas para tabelas com PK simples
-  - Foreign keys preservadas com constraints corretos
-
-#### Arquivos Criados
-- `scripts/export_to_supabase.py` - Script de exportação
-- `export_supabase.sql` - SQL gerado para Supabase
-
-### Versão 2.0.2 (28/03/2026)
-
-#### 🐞 Correção de Deploy na Vercel (Serverless)
-- **Problema**: Erro `500: FUNCTION_INVOCATION_FAILED` ao acessar a aplicação na Vercel
-- **Causas identificadas**:
-  - Ausência de `vercel.json` para roteamento
-  - Ausência de `api/index.py` como entrypoint serverless
-  - `config.py` tentava conectar ao PostgreSQL durante importação (timeout)
-  - SQLite fallback gravava em diretório read-only
-  - `SESSION_TYPE = 'filesystem'` incompatível com serverless
-- **Solução**:
-  - Criado `vercel.json` com configuração de builds e routes
-  - Criado `api/index.py` como entrypoint para Vercel
-  - Refatorado `config.py` com detecção de ambiente serverless (`is_serverless()`)
-  - Corrigido `get_database_uri()` para não testar conexão em serverless
-  - SQLite fallback usa `/tmp` em ambiente serverless
-  - `ProductionConfig` usa sessão via cookies (não filesystem)
-  - Criado `.vercelignore` para excluir arquivos desnecessários
-  - Criado `runtime.txt` especificando Python 3.11.6
-  - Atualizado `requirements.txt` com gunicorn
-- **Arquivos criados**:
-  - `vercel.json` - Configuração de deploy Vercel
-  - `api/index.py` - Entrypoint serverless
-  - `.vercelignore` - Arquivos excluídos do deploy
-  - `runtime.txt` - Versão Python
-- **Arquivos modificados**:
-  - `config.py` - Detecção de ambiente serverless, lógica de DB resiliente
-  - `app/__init__.py` - Tratamento de erros em serverless
-  - `requirements.txt` - Adicionado gunicorn
-
-#### Variáveis de Ambiente Necessárias na Vercel
-| Variável | Obrigatória | Descrição |
-|----------|-------------|-----------|
-| `DATABASE_URL` | Sim | URI PostgreSQL (ex: `postgresql://user:pass@host:5432/db`) |
-| `SECRET_KEY` | Sim | Chave secreta do Flask |
-| `FLASK_ENV` | Não | Padrão: `production` |
-
-### Versão 2.0.1 (28/03/2026)
-
-#### 🐞 Correção de Entrypoint Flask
-- **Problema**: Erro "No flask entrypoint found" ao executar `flask run`
-- **Causa**: A variável `app` estava encapsulada em função `main()` em `run.py`
-- **Solução**:
-  - Criado `app.py` como entrypoint principal com `app` no escopo global
-  - Criado `.flaskenv` com configurações automáticas do Flask CLI
-  - Criado `pyproject.toml` com definição de scripts
-  - Atualizado `.env.example` com `FLASK_APP=app.py`
-  - Atualizado `run.py` com documentação de compatibilidade
-- **Arquivos criados**:
-  - `app.py` - Entrypoint principal
-  - `.flaskenv` - Variáveis de ambiente Flask
-  - `pyproject.toml` - Configuração do projeto
-- **Arquivos modificados**:
-  - `.env.example` - FLASK_APP corrigido
-  - `run.py` - Documentação atualizada
-
-### Versão 2.0.0 (28/03/2026)
-
-#### ✅ Gestão Avançada de Turmas
-- **Matérias por Turma**: Definir matérias e aulas/semana para cada turma
-- **Página dedicada**: `/turmas/<id>/materias` com interface completa
-- **Validação**: Mostra professores disponíveis por matéria
-- **Tabela de associação**: `turma_materias` com campo `aulas_por_periodo`
-
-#### ✅ Professores e Matérias
-- **Matérias por Professor**: Cada professor tem lista de matérias que pode lecionar
-- **Exibição**: Página de detalhe mostra matérias como badges
-- **Gerenciamento**: Página dedicada `/professores/<id>/materias` com checkboxes
-- **API**: Rotas para adicionar/remover matérias via AJAX
-- **Tabela de associação**: `professor_materias`
-
-#### ✅ Geração Automática de Calendário
-- **Serviço**: `GeradorCalendarioAcademico` em `app/services/gerador_calendario.py`
-- **Algoritmo**: Heurístico guloso para distribuição de aulas
-- **Restrições**: Sem conflitos de professor, turma ou alunos
-- **Períodos**: Semestral ou Anual
-- **Interface**: Botão "Gerar Calendário Semanal" na página de turma
-- **Geração em lote**: Botão "Gerar Calendário Geral" na lista de turmas
-
-#### ✅ Integração
-- Link "Matérias" adicionado ao sidebar
-- Coluna "Matérias" na tabela de turmas
-- Ícone de livro para acessar matérias da turma na tabela
-
-#### ✅ Controle de Acesso
-- Edição de matérias: apenas Diretora e Coordenação
-- Geração de calendário: apenas Diretora e Coordenação
-
-#### ✅ Seed Atualizado
-- Associações automáticas de professores às suas especialidades
-- Todas as turmas com todas as matérias configuradas
-- Aulas por semana: Matemática (4), Português (4), outras (2)
-
-#### ✅ Documentação
-- PROJECT_CONTEXT.md atualizado com novas funcionalidades
-- Modelagem de dados atualizada
-- Sistema de calendário documentado
-
-### Versão 1.4.0 (27/03/2026)
-
-#### ✅ Consistência de UI - Sidebar e Header
-- **Problema corrigido**: Altura inconsistente entre `.sidebar-header` e `.header`
-- **Solução aplicada**:
-  - `.sidebar-header` agora usa `height: var(--header-height)` (mesma variável do `.header`)
-  - Padding alterado de `1.5rem` (todos os lados) para `0 1.5rem` (apenas horizontal)
-  - Ambos os elementos compartilham a mesma variável CSS `--header-height`
-- **Responsividade**: Alterações se adaptam automaticamente via variável CSS (64px desktop, 56px mobile)
-- **Boas práticas**:
-  - Zero código duplicado
-  - Variáveis CSS reutilizáveis
-  - Sem impacto em outros componentes
-- **Arquivo modificado**: `app/static/css/main.css`
-
-### Versão 1.0.0 (26/03/2026)
-- Versão inicial do sistema
-- Estrutura MVC completa
-- Todos os módulos implementados
-
----
-
-## 🛠️ Histórico de Correções
-
-### 🔧 Correção: 500 INTERNAL_SERVER_ERROR - FUNCTION_INVOCATION_FAILED (30/03/2026)
-
-#### 📍 O que foi alterado
-- **Arquivo**: `app/services/gerador_calendario.py` - Reescrito completamente
-- **Arquivo**: `app/__init__.py` - Adicionado logging estruturado
-
-#### ❓ Por que foi necessário
-O sistema apresentava erro `500: INTERNAL_SERVER_ERROR` com código `FUNCTION_INVOCATION_FAILED` ao ser acessado na Vercel. A serverless function não conseguia inicializar.
-
-#### ⚠️ Qual erro foi corrigido
-- **Erro original**: O arquivo `gerador_calendario.py` usava SQLAlchemy ORM diretamente (`Aula.query`, `Turma.query`, `db.session`)
-- **Problema**: Quando `turmas_controller.py` importava `gerador_calendario.py`, os imports de modelos SQLAlchemy falhavam se o PostgreSQL não estivesse acessível
-- **Resultado**: A inicialização da serverless function falhava com `FUNCTION_INVOCATION_FAILED`
-
-#### 🔧 Como foi corrigido
-1. **Reescrito `gerador_calendario.py`** para usar Supabase REST API via repositórios:
-   - Substituídos imports de `app.models.*` por imports de `app.repositories.*`
-   - Substituídas queries SQLAlchemy (`Aula.query.filter()`) por métodos de repositório (`self._aula_repo.get_by_professor()`)
-   - Substituído `db.session.add()` e `db.session.commit()` por `self._aula_repo.create()`
-   - Mantida toda a lógica de negócio original (verificação de conflitos, distribuição de aulas, etc.)
-
-2. **Melhorado `app/__init__.py`** com logging estruturado:
-   - Adicionada função `_log()` para logs com prefixo de ambiente (Serverless/Local)
-   - Adicionado try/except com stack trace na função `create_app()`
-   - Logs de cada etapa da inicialização para facilitar debugging
-
-#### 💡 Como evitar esse erro no futuro
-1. **Nunca usar SQLAlchemy ORM diretamente** em arquivos que serão importados em ambiente serverless
-2. **Sempre usar os repositórios Supabase** para acesso a dados
-3. **Testar com `FLASK_ENV=production`** localmente antes de fazer deploy
-4. **Verificar logs do Vercel** (Function Logs) para identificar erros de inicialização
-5. **Manter imports lazy** - usar imports dentro de funções quando possível
-
-#### 📊 Arquitetura Atualizada
-```
-ANTES (problemático):
-turmas_controller → gerador_calendario → SQLAlchemy Models → PostgreSQL (falha)
-
-DEPOIS (corrigido):
-turmas_controller → gerador_calendario → Supabase Repositories → Supabase REST API
-```
-
----
-
-### 📋 Como Ativar Logs Detalhados
-
-#### No Vercel (Produção)
-1. Acesse o painel do Vercel
-2. Vá em **Deployments** → selecione o deployment
-3. Clique em **Functions** → veja os logs em tempo real
-4. Os logs agora incluem prefixo `[Serverless]` para fácil identificação
-
-#### Localmente (Desenvolvimento)
-```bash
-# Executar com logs detalhados
-FLASK_ENV=development flask run
-
-# Ou via Python diretamente
-python app.py
-```
-
-#### Identificar Stack Trace
-Os erros agora mostram:
-- `[ERRO]` - Erros gerais do sistema
-- `[ERRO][Serverless]` - Erros específicos do ambiente Vercel
-- `[OK]` - Operações bem-sucedidas
-- `[AVISO]` - Avisos que não impedem o funcionamento
-
----
-
-### 🧪 Credenciais de Teste
-
-| Email | Senha | Tipo | Acesso |
-|-------|-------|------|--------|
-| joao@escola.com | 1234 | Diretora | Total |
-| coordenacao@escola.com | 1234 | Coordenação | Cadastros |
-| joao@prof.com | 1234 | Professor | Restrito |
 
 ---

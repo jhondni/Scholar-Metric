@@ -19,6 +19,17 @@ class Materia(db.Model):
     carga_horaria = db.Column(db.Integer, nullable=True)
     ativa = db.Column(db.Boolean, default=True)
     
+    def to_dict(self) -> dict:
+        """Converte a matéria para dicionário."""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'codigo': self.codigo,
+            'descricao': self.descricao,
+            'carga_horaria': self.carga_horaria,
+            'ativa': self.ativa
+        }
+    
     def __repr__(self):
         return f'<Materia {self.nome}>'
 

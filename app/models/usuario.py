@@ -68,6 +68,23 @@ class Usuario(UserMixin, db.Model):
         self.ultimo_acesso = datetime.utcnow()
         db.session.commit()
     
+    def to_dict(self) -> dict:
+        """Converte o usuário para dicionário."""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'email': self.email,
+            'senha_hash': self.senha_hash,
+            'tipo': self.tipo,
+            'avatar': self.avatar,
+            'telefone': self.telefone,
+            'tema': self.tema,
+            'ativo': self.ativo,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None,
+            'ultimo_acesso': self.ultimo_acesso.isoformat() if self.ultimo_acesso else None
+        }
+    
     def __repr__(self):
         return f'<Usuario {self.nome} ({self.tipo})>'
 

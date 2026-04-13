@@ -1,90 +1,144 @@
 """
 app/repositories/frequencia_repository.py - Repositório de Frequências
 
-Operações de acesso a dados para a tabela de frequências.
+Operações de acesso a dados para a tabela de frequências via SQLAlchemy.
 """
 
-from typing import List, Dict, Optional
-from app.repositories.base_repository import BaseRepository
+from typing import List, Optional, Dict
+from app import db
+from app.models.frequencia import Frequencia
 
 
-class FrequenciaRepository(BaseRepository):
-    """Repositório para operações com frequências."""
+class FrequenciaRepository:
+    """Repositório para operações com frequências via SQLAlchemy."""
     
     def __init__(self):
-        super().__init__('frequencias')
+        pass
+    
+    def get_all(self, filters: Dict = None, order_by: str = None,
+                limit: int = None, offset: int = None) -> List[Dict]:
+        """Busca todas as frequências."""
+        query = Frequencia.query
+        
+        if filters:
+            for key, value in filters.items():
+                if value is not None and hasattr(Frequencia, key):
+                    query = query.filter(getattr(Frequencia, key) == value)
+        
+        if order_by:
+            if order_by.startswith('-'):
+                query = query.order_by(db.desc(getattr(Frequencia, order_by[1:])))
+            else:
+                query = query.order_by(getattr(Frequencia, order_by))
+        
+        if limit:
+            query = query.limit(limit)
+        
+        if offset:
+            query = query.offset(offset)
+        
+        return [f.to_dict() for f in query.all()]
+    
+    def get_by_id(self, frequencia_id: int) -> Optional[Dict]:
+        """Busca frequência por ID."""
+        freq = Frequencia.query.get(frequencia_id)
+        return freq.to_dict() if freq else None
     
     def get_by_aula(self, aula_id: int) -> List[Dict]:
         """Busca frequências de uma aula."""
-        return self.get_by_field('aula_id', aula_id)
+        frequencias = Frequencia.query.filter_by(aula_id=aula_id).all()
+        return [f.to_dict() for f in frequencias]
     
     def get_by_aluno(self, aluno_id: int) -> List[Dict]:
         """Busca frequências de um aluno."""
-        return self.get_by_field('aluno_id', aluno_id)
+        frequencias = Frequencia.query.filter_by(aluno_id=aluno_id).all()
+        return [f.to_dict() for f in frequencias]
+    
+    def get_by_field(self, field: str, value) -> List[Dict]:
+        """Busca frequências por campo."""
+        if hasattr(Frequencia, field):
+            frequencias = Frequencia.query.filter(getattr(Frequencia, field) == value).all()
+            return [f.to_dict() for f in frequencias]
+        return []
+    
+    def get_one_by_field(self, field: str, value) -> Optional[Dict]:
+        """Busca uma frequência por campo."""
+        if hasattr(Frequencia, field):
+            freq = Frequencia.query.filter(getattr(Frequencia, field) == value).first()
+            return freq.to_dict() if freq else None
+        return None
     
     def get_by_aluno_and_aula(self, aluno_id: int, aula_id: int) -> Optional[Dict]:
-        """
-        Busca frequência específica de um aluno em uma aula.
-        
-        Args:
-            aluno_id: ID do aluno
-            aula_id: ID da aula
-            
-        Returns:
-            Optional[Dict]: Frequência encontrada ou None
-        """
+        """Busca frequência específica de um aluno em uma aula."""
+        freq = Frequencia.query.filter_by(aluno_id=aluno_id, aula_id=aula_id).first()
+        return freq.to_dict() if freq else None
+    
+    def create(self, data: Dict) -> Optional[Dict]:
+        """Cria uma nova frequência."""
         try:
-            client = self._get_client()
-            result = client.table(self.table_name).select('*')
-            result = result.eq('aluno_id', aluno_id).eq('aula_id', aula_id)
-            result = result.limit(1).execute()
-            return result.data[0] if result.data else None
+            freq = Frequencia()
+            for key, value in data.items():
+                if hasattr(freq, key):
+                    setattr(freq, key, value)
+            
+            db.session.add(freq)
+            db.session.commit()
+            return freq.to_dict()
         except Exception as e:
-            print(f"[ERRO] get_by_aluno_and_aula: {e}")
+            db.session.rollback()
+            print(f"[ERRO] create: {e}")
             return None
     
-    def register_presence(self, aluno_id: int, aula_id: int, 
-                          presente: bool = True, justificativa: str = None) -> Optional[Dict]:
-        """
-        Registra presença ou ausência de um aluno.
-        
-        Args:
-            aluno_id: ID do aluno
-            aula_id: ID da aula
-            presente: Se o aluno está presente
-            justificativa: Justificativa para ausência
+    def update(self, frequencia_id: int, data: Dict) -> Optional[Dict]:
+        """Atualiza uma frequência existente."""
+        try:
+            freq = Frequencia.query.get(frequencia_id)
+            if not freq:
+                return None
             
-        Returns:
-            Optional[Dict]: Registro criado/atualizado
-        """
-        data = {
-            'aluno_id': aluno_id,
-            'aula_id': aula_id,
-            'presente': presente,
-            'justificativa': justificativa
-        }
-        
-        # Tenta atualizar se já existe
+            for key, value in data.items():
+                if hasattr(freq, key):
+                    setattr(freq, key, value)
+            
+            db.session.commit()
+            return freq.to_dict()
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO] update: {e}")
+            return None
+    
+    def delete(self, frequencia_id: int) -> bool:
+        """Deleta uma frequência."""
+        try:
+            freq = Frequencia.query.get(frequencia_id)
+            if freq:
+                db.session.delete(freq)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO] delete: {e}")
+            return False
+    
+    def register_presence(self, aluno_id: int, aula_id: int,
+                          presente: bool = True, justificativa: str = None) -> Optional[Dict]:
+        """Registra presença ou ausência de um aluno."""
         existing = self.get_by_aluno_and_aula(aluno_id, aula_id)
         if existing:
             return self.update(existing['id'], {
                 'presente': presente,
                 'justificativa': justificativa
             })
-        
-        return self.create(data)
+        return self.create({
+            'aluno_id': aluno_id,
+            'aula_id': aula_id,
+            'presente': presente,
+            'justificativa': justificativa
+        })
     
     def register_batch(self, aula_id: int, presencas: List[Dict]) -> int:
-        """
-        Registra frequências em lote para uma aula.
-        
-        Args:
-            aula_id: ID da aula
-            presencas: Lista de {aluno_id: int, presente: bool, justificativa: str}
-            
-        Returns:
-            int: Número de registros criados/atualizados
-        """
+        """Registra frequências em lote para uma aula."""
         count = 0
         for presenca in presencas:
             result = self.register_presence(
@@ -98,41 +152,31 @@ class FrequenciaRepository(BaseRepository):
         return count
     
     def get_aluno_stats(self, aluno_id: int, turma_id: int = None) -> Dict:
-        """
-        Calcula estatísticas de frequência de um aluno.
+        """Calcula estatísticas de frequência de um aluno."""
+        query = Frequencia.query.filter_by(aluno_id=aluno_id)
         
-        Args:
-            aluno_id: ID do aluno
-            turma_id: Filtrar por turma (opcional)
-            
-        Returns:
-            Dict: {total: int, presencas: int, faltas: int, percentual: float}
-        """
-        try:
-            client = self._get_client()
-            query = client.table(self.table_name).select('*').eq('aluno_id', aluno_id)
-            
-            if turma_id:
-                # Busca aulas da turma
-                aulas = client.table('aulas').select('id').eq('turma_id', turma_id).execute()
-                if aulas.data:
-                    aula_ids = [a['id'] for a in aulas.data]
-                    query = query.in_('aula_id', aula_ids)
-            
-            result = query.execute()
-            registros = result.data if result.data else []
-            
-            total = len(registros)
-            presencas = sum(1 for r in registros if r.get('presente'))
-            faltas = total - presencas
-            percentual = (presencas / total * 100) if total > 0 else 100.0
-            
-            return {
-                'total': total,
-                'presencas': presencas,
-                'faltas': faltas,
-                'percentual': round(percentual, 1)
-            }
-        except Exception as e:
-            print(f"[ERRO] get_aluno_stats: {e}")
-            return {'total': 0, 'presencas': 0, 'faltas': 0, 'percentual': 100.0}
+        if turma_id:
+            from app.models.aula import Aula
+            query = query.join(Aula).filter(Aula.turma_id == turma_id)
+        
+        registros = query.all()
+        total = len(registros)
+        presencas = sum(1 for r in registros if r.presente)
+        faltas = total - presencas
+        percentual = (presencas / total * 100) if total > 0 else 100.0
+        
+        return {
+            'total': total,
+            'presencas': presencas,
+            'faltas': faltas,
+            'percentual': round(percentual, 1)
+        }
+    
+    def count(self, filters: Dict = None) -> int:
+        """Conta frequências."""
+        query = Frequencia.query
+        if filters:
+            for key, value in filters.items():
+                if value is not None and hasattr(Frequencia, key):
+                    query = query.filter(getattr(Frequencia, key) == value)
+        return query.count()

@@ -64,6 +64,22 @@ class Professor(db.Model):
             Turma.ativa == True
         ).all()
     
+    def to_dict(self) -> dict:
+        """Converte o professor para dicionário."""
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'registro': self.registro,
+            'especialidade': self.especialidade,
+            'formacao': self.formacao,
+            'cpf': self.cpf,
+            'telefone': self.telefone,
+            'endereco': self.endereco,
+            'ativo': self.ativo,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<Professor {self.registro}>'
 

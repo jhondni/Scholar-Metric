@@ -1,21 +1,20 @@
-# app/controllers/auth_controller.py - Controller de Autenticação (Supabase)
+# app/controllers/auth_controller.py - Controller de Autenticação
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError
+from datetime import datetime
 
+from app import db
+from app.models.usuario import Usuario
 from app.repositories import UsuarioRepository
-from app.services.supabase_auth import SupabaseUser
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-# Instância do repositório
 usuario_repo = UsuarioRepository()
 
-
-# ==================== Formulários ====================
 
 class LoginForm(FlaskForm):
     """Formulário de login."""
@@ -55,7 +54,7 @@ class RegistroForm(FlaskForm):
     
     def validate_email(self, field):
         """Valida se o e-mail já está em uso."""
-        if usuario_repo.get_by_email(field.data):
+        if Usuario.query.filter_by(email=field.data).first():
             raise ValidationError('E-mail já cadastrado')
 
 
@@ -67,8 +66,6 @@ class RecuperarSenhaForm(FlaskForm):
     ])
 
 
-# ==================== Rotas ====================
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Rota de login."""
@@ -78,23 +75,17 @@ def login():
     form = LoginForm()
     
     if form.validate_on_submit():
-        user_data = usuario_repo.get_by_email(form.email.data)
+        user = Usuario.query.filter_by(email=form.email.data).first()
         
-        if user_data:
-            usuario = SupabaseUser(user_data)
-            
-            if not usuario.ativo:
+        if user:
+            if not user.ativo:
                 flash('Conta desativada. Contate o administrador.', 'error')
                 return render_template('auth/login.html', form=form)
             
-            if usuario.verificar_senha(form.senha.data):
-                login_user(usuario, remember=form.lembrar.data)
-                
-                # Atualizar último acesso
-                from datetime import datetime
-                usuario_repo.update(usuario.id, {
-                    'ultimo_acesso': datetime.utcnow().isoformat()
-                })
+            if user.verificar_senha(form.senha.data):
+                login_user(user, remember=form.lembrar.data)
+                user.ultimo_acesso = datetime.utcnow()
+                db.session.commit()
                 
                 next_page = request.args.get('next')
                 return redirect(next_page or url_for('dashboard.index'))
@@ -113,12 +104,14 @@ def registro():
     form = RegistroForm()
     
     if form.validate_on_submit():
-        usuario_repo.create_user(
-            nome=form.nome.data,
-            email=form.email.data,
-            senha=form.senha.data,
-            tipo=form.tipo.data
-        )
+        user = Usuario()
+        user.nome = form.nome.data
+        user.email = form.email.data
+        user.tipo = form.tipo.data
+        user.set_senha(form.senha.data)
+        
+        db.session.add(user)
+        db.session.commit()
         
         flash('Conta criada com sucesso! Faça login.', 'success')
         return redirect(url_for('auth.login'))
@@ -132,13 +125,11 @@ def recuperar_senha():
     form = RecuperarSenhaForm()
     
     if form.validate_on_submit():
-        user_data = usuario_repo.get_by_email(form.email.data)
+        user = Usuario.query.filter_by(email=form.email.data).first()
         
-        if user_data:
-            # TODO: Implementar envio de e-mail com link de recuperação
+        if user:
             pass
         
-        # Por segurança, sempre mostrar mensagem de sucesso
         flash('Instruções enviadas para seu e-mail', 'success')
         return redirect(url_for('auth.login'))
     

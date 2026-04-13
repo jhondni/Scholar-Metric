@@ -1,7 +1,7 @@
 """
 app/repositories/__init__.py - Repositórios do Analitcs School
 
-Camada de abstração para acesso a dados via Supabase REST API.
+Camada de abstração para acesso a dados via SQLAlchemy ORM.
 """
 
 from app.repositories.base_repository import BaseRepository

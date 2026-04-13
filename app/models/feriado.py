@@ -60,5 +60,18 @@ class Feriado(db.Model):
             Feriado.data <= data_fim
         ).all()
     
+    def to_dict(self) -> dict:
+        """Converte o feriado para dicionário."""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'data': self.data.isoformat() if self.data else None,
+            'tipo': self.tipo,
+            'descricao': self.descricao,
+            'recorrente': self.recorrente,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<Feriado {self.nome} - {self.data}>'

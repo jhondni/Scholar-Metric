@@ -31,6 +31,17 @@ class Frequencia(db.Model):
         db.UniqueConstraint('aluno_id', 'aula_id', name='uq_frequencia_aluno_aula'),
     )
     
+    def to_dict(self) -> dict:
+        """Converte a frequência para dicionário."""
+        return {
+            'id': self.id,
+            'aluno_id': self.aluno_id,
+            'aula_id': self.aula_id,
+            'presente': self.presente,
+            'justificativa': self.justificativa,
+            'registrado_em': self.registrado_em.isoformat() if self.registrado_em else None
+        }
+    
     def __repr__(self):
         status = 'Presente' if self.presente else 'Ausente'
         return f'<Frequencia Aluno:{self.aluno_id} Aula:{self.aula_id} - {status}>'

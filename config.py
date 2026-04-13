@@ -116,10 +116,6 @@ class Config:
     SQLALCHEMY_DATABASE_URI = get_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Supabase
-    SUPABASE_URL = os.environ.get('SUPABASE_URL')
-    SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
-    
     # Upload de Arquivos
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max

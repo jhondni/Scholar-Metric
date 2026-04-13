@@ -93,6 +93,26 @@ class Aluno(db.Model):
         presencas = query_freq.count()
         return (presencas / total_aulas) * 100
     
+    def to_dict(self) -> dict:
+        """Converte o aluno para dicionário."""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'matricula': self.matricula,
+            'data_nascimento': self.data_nascimento.isoformat() if self.data_nascimento else None,
+            'cpf': self.cpf,
+            'email': self.email,
+            'telefone': self.telefone,
+            'endereco': self.endereco,
+            'nome_responsavel': self.nome_responsavel,
+            'telefone_responsavel': self.telefone_responsavel,
+            'email_responsavel': self.email_responsavel,
+            'ano_letivo': self.ano_letivo,
+            'status': self.status,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<Aluno {self.nome} ({self.matricula})>'
 

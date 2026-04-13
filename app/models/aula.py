@@ -111,5 +111,26 @@ class Aula(db.Model):
         ).first()
         return conflito is not None
     
+    def to_dict(self) -> dict:
+        """Converte a aula para dicionário."""
+        return {
+            'id': self.id,
+            'materia': self.materia,
+            'descricao': self.descricao,
+            'turma_id': self.turma_id,
+            'professor_id': self.professor_id,
+            'data': self.data.isoformat() if self.data else None,
+            'horario_inicio': self.horario_inicio.isoformat() if self.horario_inicio else None,
+            'horario_fim': self.horario_fim.isoformat() if self.horario_fim else None,
+            'recorrente': self.recorrente,
+            'tipo_recorrencia': self.tipo_recorrencia,
+            'dia_semana': self.dia_semana,
+            'data_fim_recorrencia': self.data_fim_recorrencia.isoformat() if self.data_fim_recorrencia else None,
+            'aula_pai_id': self.aula_pai_id,
+            'status': self.status,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<Aula {self.materia} - {self.data}>'

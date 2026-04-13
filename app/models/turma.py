@@ -111,5 +111,21 @@ class Turma(db.Model):
         total = sum(a.percentual_frequencia(self.id) for a in self.alunos)
         return total / len(self.alunos)
     
+    def to_dict(self) -> dict:
+        """Converte a turma para dicionário."""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'codigo': self.codigo,
+            'serie': self.serie,
+            'ano_letivo': self.ano_letivo,
+            'turno': self.turno,
+            'capacidade_maxima': self.capacidade_maxima,
+            'descricao': self.descricao,
+            'ativa': self.ativa,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<Turma {self.nome} ({self.codigo})>'

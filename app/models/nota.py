@@ -39,5 +39,22 @@ class Nota(db.Model):
         """Retorna o percentual de acerto."""
         return (self.valor / self.valor_maximo) * 100
     
+    def to_dict(self) -> dict:
+        """Converte a nota para dicionário."""
+        return {
+            'id': self.id,
+            'aluno_id': self.aluno_id,
+            'turma_id': self.turma_id,
+            'aula_id': self.aula_id,
+            'tipo_avaliacao': self.tipo_avaliacao,
+            'descricao': self.descricao,
+            'valor': self.valor,
+            'valor_maximo': self.valor_maximo,
+            'peso': self.peso,
+            'bimestre': self.bimestre,
+            'registrado_em': self.registrado_em.isoformat() if self.registrado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<Nota Aluno:{self.aluno_id} - {self.valor}/{self.valor_maximo}>'

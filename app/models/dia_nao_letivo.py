@@ -63,5 +63,18 @@ class DiaNaoLetivo(db.Model):
             DiaNaoLetivo.data_fim >= data_inicio
         ).all()
     
+    def to_dict(self) -> dict:
+        """Converte o dia não letivo para dicionário."""
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'data_inicio': self.data_inicio.isoformat() if self.data_inicio else None,
+            'data_fim': self.data_fim.isoformat() if self.data_fim else None,
+            'tipo': self.tipo,
+            'descricao': self.descricao,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+        }
+    
     def __repr__(self):
         return f'<DiaNaoLetivo {self.nome} - {self.data_inicio} a {self.data_fim}>'

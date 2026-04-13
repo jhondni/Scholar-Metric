@@ -115,34 +115,13 @@ def create_app(config_name='default'):
 
 def _setup_user_loader(login_manager):
     """
-    Configura o user loader do Flask-Login para usar Supabase.
-    
-    Tenta carregar o usuário do Supabase primeiro.
-    Se falhar, faz fallback para SQLAlchemy.
+    Configura o user loader do Flask-Login para usar SQLAlchemy.
     """
     @login_manager.user_loader
     def load_user(user_id):
         """Carrega usuário para a sessão do Flask-Login."""
-        # Tentar Supabase primeiro
-        try:
-            from app.services.supabase_client import is_supabase_configured
-            if is_supabase_configured():
-                from app.repositories import UsuarioRepository
-                from app.services.supabase_auth import SupabaseUser
-                
-                repo = UsuarioRepository()
-                user_data = repo.get_by_id(int(user_id))
-                if user_data:
-                    return SupabaseUser(user_data)
-        except Exception as e:
-            print(f"[AVISO] Falha ao carregar usuário do Supabase: {e}")
-        
-        # Fallback para SQLAlchemy
-        try:
-            from app.models.usuario import Usuario
-            return Usuario.query.get(int(user_id))
-        except Exception:
-            return None
+        from app.models.usuario import Usuario
+        return Usuario.query.get(int(user_id))
 
 
 def register_error_handlers(app):
